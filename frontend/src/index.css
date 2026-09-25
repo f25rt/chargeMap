@@ -1,0 +1,66 @@
+:root {
+  /* Safe-area fallbacks (0 on non-notch devices/browsers). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  background: #f3f6f1;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* The app fills the viewport at every size; layout adapts in App.tsx. */
+#root {
+  display: flex;
+  align-items: stretch;
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  background: #f3f6f1;
+  overflow: hidden;
+}
+
+/* Leaflet marker interactions feel snappier without the focus outline. */
+.leaflet-container {
+  outline: none;
+  font-family: inherit;
+}
+
+.leaflet-control-attribution {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/*
+ * Pin-placement cursor: a green map-pin (hotspot at the tip, x=12 y=32).
+ * Applied to the map and its interactive panes, overriding Leaflet's grab cursor.
+ */
+.chargemap-pin-cursor,
+.chargemap-pin-cursor .leaflet-grab,
+.chargemap-pin-cursor .leaflet-interactive,
+.chargemap-pin-cursor .leaflet-container {
+  cursor:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 24 24'><path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='%231f9d57' stroke='white' stroke-width='1.5'/><circle cx='12' cy='9' r='2.5' fill='white'/></svg>")
+      12 32,
+    crosshair !important;
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-ssr/
+
+# Local env files (contain tokens/secrets)
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store

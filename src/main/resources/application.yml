@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: chargemap-api
+  data:
+    mongodb:
+      # Local default targets the single-node replica set from docker-compose (replicaSet=rs0),
+      # which is required for multi-document transactions. Atlas URIs are replica sets already.
+      uri: ${MONGODB_URI:mongodb://localhost:27017/chargemap?replicaSet=rs0}
+      # Indexes are created explicitly by MongoIndexConfig (single source of truth), so
+      # annotation-based auto-index-creation is disabled to avoid duplicate/conflicting
+      # index definitions (e.g. two text indexes on one collection).
+      auto-index-creation: false
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 10MB
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# Application-specific configuration (see specs/chargemap-backend-mvp/design.md)
+chargemap:
+  geo:
+    default-radius-km: 5
+    max-results: 50
+  availability:
+    staleness-minutes: 30
+  pagination:
+    default-size: 20
+    max-size: 100
+  security:
+    jwt:
+      # Base64-encoded HMAC secret. Override via env in every real environment.
+      secret: ${JWT_SECRET:Y2hhbmdlLW1lLXRoaXMtaXMtYS1kZXYtb25seS1zZWNyZXQtMzIrYnl0ZXM=}
+      expiry-minutes: ${JWT_EXPIRY_MINUTES:1440}

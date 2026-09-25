@@ -1,0 +1,8 @@
+# Test configuration. MongoDB URI is injected by Testcontainers via @DynamicPropertySource.
+chargemap:
+  rate-limit:
+    enabled: false
+  security:
+    jwt:
+      secret: dGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtdGVzdC1zZWNyZXQtMzIrYnl0ZXM=
+      expiry-minutes: 60

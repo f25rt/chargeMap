@@ -1,0 +1,60 @@
+package ph.chargemap.pricing;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+
+/**
+ * Snapshot of a station's active price, embedded in the {@code Station} document for
+ * fast reads. Superseded prices are appended to the {@code price_history} collection.
+ * Price is PHP and stored with a currency-appropriate decimal type (Requirement 13.5).
+ */
+public class CurrentPricing {
+
+    private BigDecimal pricePerKwh;
+    private PricingModel pricingModel;
+    private Instant effectiveFrom;
+    private Instant effectiveTo;
+
+    public CurrentPricing() {
+    }
+
+    public CurrentPricing(BigDecimal pricePerKwh, PricingModel pricingModel,
+                          Instant effectiveFrom, Instant effectiveTo) {
+        this.pricePerKwh = pricePerKwh;
+        this.pricingModel = pricingModel;
+        this.effectiveFrom = effectiveFrom;
+        this.effectiveTo = effectiveTo;
+    }
+
+    public BigDecimal getPricePerKwh() {
+        return pricePerKwh;
+    }
+
+    public void setPricePerKwh(BigDecimal pricePerKwh) {
+        this.pricePerKwh = pricePerKwh;
+    }
+
+    public PricingModel getPricingModel() {
+        return pricingModel;
+    }
+
+    public void setPricingModel(PricingModel pricingModel) {
+        this.pricingModel = pricingModel;
+    }
+
+    public Instant getEffectiveFrom() {
+        return effectiveFrom;
+    }
+
+    public void setEffectiveFrom(Instant effectiveFrom) {
+        this.effectiveFrom = effectiveFrom;
+    }
+
+    public Instant getEffectiveTo() {
+        return effectiveTo;
+    }
+
+    public void setEffectiveTo(Instant effectiveTo) {
+        this.effectiveTo = effectiveTo;
+    }
+}

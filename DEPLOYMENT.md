@@ -75,8 +75,8 @@ exposed, rotate it in **Atlas → Database Access → Edit → Edit Password** a
 ### Backend (against local Docker Mongo + Redis)
 
 ```powershell
-# From the repo root
-docker compose up -d                      # starts chargemap-mongo + chargemap-redis
+# From the repo root (dev stack: local Mongo + Redis)
+docker compose -f docker-compose.dev.yml up -d   # starts chargemap-mongo + chargemap-redis
 $env:JAVA_HOME = "C:\path\to\jdk-21"
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $env:SPRING_PROFILES_ACTIVE = "dev"

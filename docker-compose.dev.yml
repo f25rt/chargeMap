@@ -1,0 +1,47 @@
+services:
+  mongo:
+    # LOCAL DEV ONLY. For a droplet, prefer MongoDB Atlas (see docker-compose.prod.yml),
+    # which needs no Mongo container.
+    #
+    # IMPORTANT: mongo:5+ requires a CPU with AVX support. Some low-cost / older VPS CPUs
+    # lack AVX and `mongo:7` will crash with "Illegal instruction (core dumped)". If you
+    # MUST run Mongo on such a host, pin the image to `mongo:4.4` instead (last version
+    # that runs without AVX) — set it via the MONGO_IMAGE env var below.
+    image: ${MONGO_IMAGE:-mongo:7}
+    container_name: chargemap-mongo
+    # Run as a single-node replica set so multi-document transactions work locally
+    # (transactions require a replica set; Atlas clusters already are one).
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - chargemap-mongo-data:/data/db
+    healthcheck:
+      # Initiate the replica set once, then report healthy. Idempotent: re-running
+      # rs.initiate() after it's set just errors harmlessly. `mongosh` on mongo:5+,
+      # `mongo` on 4.4 — this falls back to whichever client exists.
+      test:
+        - "CMD-SHELL"
+        - >-
+          mongosh --quiet --eval
+          "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }"
+          || mongo --quiet --eval
+          "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }"
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: chargemap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - chargemap-redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  chargemap-mongo-data:
+  chargemap-redis-data:

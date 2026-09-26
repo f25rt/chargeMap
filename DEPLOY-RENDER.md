@@ -13,17 +13,28 @@ MongoDB is **not** on Render — use MongoDB Atlas.
 
 ---
 
-## Why you saw a "Dockerfile parse error"
+## Why you saw a "Dockerfile" / "docker-compose mongo image" error
 
-This repo has **two** Dockerfiles (`./Dockerfile` for the backend, `frontend/Dockerfile`
-for the frontend). If you create a Render service manually without pointing it at the
-right Dockerfile + root directory, Render can try to build the wrong context and fail to
-parse it. The root `Dockerfile` itself is valid (it builds locally).
+Render does **not** use `docker-compose`. If you create a service **manually** (New +
+→ Web Service → Docker) instead of using the Blueprint, Render auto-scans the repo, and it
+can pick up `docker-compose.*.yml` and fail on the `mongo` service (which is only for local
+dev), or build the wrong Dockerfile. This repo has two Dockerfiles (`./Dockerfile` backend,
+`frontend/Dockerfile`), which adds to the ambiguity.
 
-**Fix:** deploy via the **Blueprint** (`render.yaml`) below, which names each service's
-Dockerfile path and context explicitly — no auto-detection guesswork. (If you must create
-services by hand, set the backend's **Dockerfile Path** to `Dockerfile` and **Root
-Directory** to the repo root, and deploy the frontend as a **Static Site**, not Docker.)
+**Fix — always deploy via the Blueprint:**
+
+1. Render Dashboard → **New +** → **Blueprint** (NOT "Web Service").
+2. Select this repo. Render reads only `render.yaml` and provisions the three services
+   exactly as declared — it never touches the compose files.
+
+The dev compose file is named `docker-compose.dev.yml` (and the droplet one
+`docker-compose.prod.yml`) precisely so there is no bare `docker-compose.yml` for Render's
+autodetect to grab. If you previously created services by hand, delete them and start over
+with the Blueprint.
+
+(If you ever must create the backend by hand: choose **Docker**, set **Dockerfile Path** =
+`Dockerfile`, **Root Directory** = repo root; deploy the frontend as a **Static Site**, not
+Docker.)
 
 ---
 

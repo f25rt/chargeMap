@@ -31,6 +31,13 @@ import SubmissionsPanel from "./panels/SubmissionsPanel";
 import RewardsPanel from "./panels/RewardsPanel";
 import StationMap from "../components/StationMap";
 import AdminStationEditDialog from "../components/AdminStationEditDialog";
+import BranchesPanel from "./panels/BranchesPanel";
+import AdminManagementPanel from "./panels/AdminManagementPanel";
+import AdminProfilePanel from "./panels/AdminProfilePanel";
+import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
+import SupervisorAccountRoundedIcon from "@mui/icons-material/SupervisorAccountRounded";
+import AccountCircleRoundedIcon from "@mui/icons-material/AccountCircleRounded";
+import { useAuth } from "../auth/AuthContext";
 
 const CEBU: [number, number] = [10.3181, 123.9068];
 
@@ -291,6 +298,8 @@ function Overview() {
         </Box>
       </Card>
 
+      <LikeTrendCard />
+
       <AdminStationEditDialog
         station={editStation}
         onClose={() => setEditStation(null)}
@@ -303,18 +312,109 @@ function Overview() {
   );
 }
 
+/** Like trend for the admin's assigned branch (super admin sees all). */
+function LikeTrendCard() {
+  const [points, setPoints] = useState<import("../api/types").LikeTrendPoint[]>([]);
+  const [days, setDays] = useState(7);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api
+      .branchLikeTrend(days)
+      .then(setPoints)
+      .catch(() => setPoints([]))
+      .finally(() => setLoaded(true));
+  }, [days]);
+
+  const max = points.reduce((m, p) => Math.max(m, p.likes), 0) || 1;
+  const totalNet = points.reduce((s, p) => s + p.net, 0);
+
+  return (
+    <Card sx={{ p: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+        <Typography variant="subtitle1">Station like trend</Typography>
+        <Chip label={`${totalNet >= 0 ? "+" : ""}${totalNet} net`} size="small" color={totalNet >= 0 ? "success" : "default"} />
+      </Stack>
+      <Divider sx={{ mb: 1.5 }} />
+      <Stack direction="row" spacing={1} mb={1.5}>
+        {[
+          { d: 1, label: "Today" },
+          { d: 7, label: "Week" },
+          { d: 30, label: "30 days" },
+        ].map((o) => (
+          <Chip
+            key={o.d}
+            label={o.label}
+            size="small"
+            color={days === o.d ? "primary" : "default"}
+            variant={days === o.d ? "filled" : "outlined"}
+            onClick={() => setDays(o.d)}
+          />
+        ))}
+      </Stack>
+      {!loaded ? (
+        <Typography variant="caption" color="text.secondary">
+          Loading…
+        </Typography>
+      ) : points.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" py={1}>
+          No likes recorded in this window for your branch's stations.
+        </Typography>
+      ) : (
+        <Stack direction="row" alignItems="flex-end" spacing={1} sx={{ height: 120, mt: 1 }}>
+          {points.map((p) => (
+            <Box key={p.date} sx={{ flex: 1, textAlign: "center" }}>
+              <Box
+                sx={{
+                  height: `${(p.likes / max) * 90}px`,
+                  minHeight: 3,
+                  bgcolor: "primary.main",
+                  borderRadius: 1,
+                  mx: "auto",
+                  width: "70%",
+                }}
+                title={`${p.likes} likes, ${p.unlikes} unlikes`}
+              />
+              <Typography sx={{ fontSize: 9, mt: 0.5 }} color="text.secondary">
+                {p.date.slice(5)}
+              </Typography>
+            </Box>
+          ))}
+        </Stack>
+      )}
+    </Card>
+  );
+}
+
 export default function AdminApp() {
+  const { user } = useAuth();
+  const isSuper = user?.role === "SUPER_ADMIN";
+
+  const items = [
+    { label: "Overview", icon: <DashboardRoundedIcon />, render: () => <Overview /> },
+    { label: "Submissions", icon: <InboxRoundedIcon />, render: () => <SubmissionsPanel /> },
+    { label: "Users", icon: <PeopleRoundedIcon />, render: () => <UsersPanel /> },
+    { label: "Rewards", icon: <EmojiEventsRoundedIcon />, render: () => <RewardsPanel /> },
+    { label: "Pricing trends", icon: <TrendingUpRoundedIcon />, render: () => <PricingTrendsPanel /> },
+    // Super-admin-only areas.
+    ...(isSuper
+      ? [
+          { label: "Branches", icon: <ApartmentRoundedIcon />, render: () => <BranchesPanel /> },
+          {
+            label: "Admins",
+            icon: <SupervisorAccountRoundedIcon />,
+            render: () => <AdminManagementPanel />,
+          },
+        ]
+      : []),
+    { label: "Profile", icon: <AccountCircleRoundedIcon />, render: () => <AdminProfilePanel /> },
+  ];
+
   return (
     <DashboardShell
-      title="ChargeMap Admin"
-      roleLabel="ADMIN"
-      items={[
-        { label: "Overview", icon: <DashboardRoundedIcon />, render: () => <Overview /> },
-        { label: "Submissions", icon: <InboxRoundedIcon />, render: () => <SubmissionsPanel /> },
-        { label: "Users", icon: <PeopleRoundedIcon />, render: () => <UsersPanel /> },
-        { label: "Rewards", icon: <EmojiEventsRoundedIcon />, render: () => <RewardsPanel /> },
-        { label: "Pricing trends", icon: <TrendingUpRoundedIcon />, render: () => <PricingTrendsPanel /> },
-      ]}
+      title={isSuper ? "ChargeMap Super Admin" : "ChargeMap Admin"}
+      roleLabel={isSuper ? "SUPER ADMIN" : "ADMIN"}
+      items={items}
     />
   );
 }

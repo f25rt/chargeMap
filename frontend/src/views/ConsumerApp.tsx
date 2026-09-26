@@ -33,6 +33,7 @@ import {
   formatDuration,
   estimateMinutes,
   RANGE_SAFETY_BUFFER,
+  AVG_SPEED_KMH,
 } from "../routing/osrm";
 import { api } from "../api/client";
 import type { StationFilters, StationSummary } from "../api/types";
@@ -97,6 +98,8 @@ export default function ConsumerApp() {
   const [liveEtaSeconds, setLiveEtaSeconds] = useState<number | null>(null);
   // User's current location, used to estimate drive time to nearby chargers.
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
+  // Live height fraction of the nearby-charger bottom sheet (drives the FAB position).
+  const [sheetFraction, setSheetFraction] = useState(0.2);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [lat, lng] = CEBU;
@@ -243,22 +246,35 @@ export default function ConsumerApp() {
     [],
   );
 
-  /** Finds the nearest AVAILABLE station reachable within the battery minutes (proxy ETA). */
+  /**
+   * Finds the nearest station reachable within the battery minutes. Queries the backend
+   * for stations around the user's current position (a radius scaled to the battery range),
+   * so candidates aren't limited to the on-screen nearby list. Prefers stations that are
+   * AVAILABLE now; falls back to the nearest reachable station of any status. Returns the
+   * on-screen station object when the candidate is already loaded, else the fetched one.
+   */
   const findSuggestion = useCallback(
-    (from: { lat: number; lng: number }, minutes: number, excludeId?: string) => {
+    async (from: { lat: number; lng: number }, minutes: number, excludeId?: string) => {
       const budget = minutes * (1 - RANGE_SAFETY_BUFFER);
-      const candidates = stations
-        .filter(
-          (s) =>
-            s.location &&
-            s.id !== excludeId &&
-            s.availabilitySummary === "AVAILABLE" &&
-            s.availableCount > 0,
-        )
+      // Max drivable distance ~ budget minutes at AVG_SPEED_KMH; cap the search radius sensibly.
+      const radiusKm = Math.min(60, Math.max(RADIUS_KM, (budget / 60) * AVG_SPEED_KMH));
+      let pool: StationSummary[] = stations;
+      try {
+        pool = await api.nearby(from.lat, from.lng, radiusKm, {});
+      } catch {
+        // Network hiccup: fall back to the already-loaded nearby stations.
+        pool = stations;
+      }
+      const reachable = pool
+        .filter((s) => s.location && s.id !== excludeId)
         .map((s) => ({ station: s, etaMinutes: estimateMinutes(from, s.location!) }))
         .filter((c) => c.etaMinutes <= budget)
         .sort((a, b) => a.etaMinutes - b.etaMinutes);
-      return candidates[0] ?? null;
+
+      const availableFirst = reachable.filter(
+        (c) => c.station.availabilitySummary === "AVAILABLE" && c.station.availableCount > 0,
+      );
+      return availableFirst[0] ?? reachable[0] ?? null;
     },
     [stations],
   );
@@ -377,7 +393,7 @@ export default function ConsumerApp() {
   }, [routeSummary?.stationId, routeToStation]);
 
   // When battery minutes change (or a route starts), check if the current target fits;
-  // if not, suggest the nearest reachable AVAILABLE station.
+  // if not, suggest the nearest reachable station (queried around the user's location).
   useEffect(() => {
     if (batteryMinutes == null || !routeSummary || !origin) {
       setSuggestion(null);
@@ -389,12 +405,17 @@ export default function ConsumerApp() {
       setSuggestion(null); // current destination is reachable
       return;
     }
-    const found = findSuggestion(
-      { lat: origin[0], lng: origin[1] },
-      batteryMinutes,
-      routeSummary.stationId,
-    );
-    setSuggestion(found);
+    let cancelled = false;
+    findSuggestion({ lat: origin[0], lng: origin[1] }, batteryMinutes, routeSummary.stationId)
+      .then((found) => {
+        if (!cancelled) setSuggestion(found);
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestion(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [batteryMinutes, routeSummary, origin, findSuggestion]);
 
   // Fetch the user's current location once they enter a battery range, so nearby
@@ -511,29 +532,32 @@ export default function ConsumerApp() {
               </Typography>
             </Box>
 
-            <Divider sx={{ my: 1.25 }} />
-
-            {/* Battery range input — drives reachability + reroute suggestions. */}
-            <Typography sx={{ fontSize: 11.5, fontWeight: 600 }} color="text.secondary">
-              Battery driving range
-            </Typography>
-            <TextField
-              type="number"
-              size="small"
-              fullWidth
-              placeholder="Minutes left"
-              value={batteryMinutes ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setBatteryMinutes(v === "" ? null : Math.max(0, Number(v)));
-              }}
-              InputProps={{ endAdornment: <Typography sx={{ fontSize: 12, color: "text.secondary" }}>min</Typography> }}
-              inputProps={{ min: 0, inputMode: "numeric" }}
-              sx={{ mt: 0.5 }}
-            />
+            {/* Battery range input is a signed-in feature only. */}
+            {user && (
+              <>
+                <Divider sx={{ my: 1.25 }} />
+                <Typography sx={{ fontSize: 11.5, fontWeight: 600 }} color="text.secondary">
+                  Battery driving range
+                </Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  fullWidth
+                  placeholder="Minutes left"
+                  value={batteryMinutes ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setBatteryMinutes(v === "" ? null : Math.max(0, Number(v)));
+                  }}
+                  InputProps={{ endAdornment: <Typography sx={{ fontSize: 12, color: "text.secondary" }}>min</Typography> }}
+                  inputProps={{ min: 0, inputMode: "numeric" }}
+                  sx={{ mt: 0.5 }}
+                />
+              </>
+            )}
 
             {/* Suggestion prompt when the current target is out of battery range. */}
-            {suggestion && (
+            {user && suggestion && (
               <Box
                 sx={{
                   mt: 1.25,
@@ -544,11 +568,12 @@ export default function ConsumerApp() {
                 }}
               >
                 <Typography sx={{ fontSize: 11.5, fontWeight: 700 }} color="warning.dark">
-                  Target may be out of range
+                  This station is farther than your battery time
                 </Typography>
                 <Typography sx={{ fontSize: 12, mt: 0.25 }} color="text.primary">
-                  Nearest reachable station: <b>{suggestion.station.name}</b> ·{" "}
-                  {Math.round(suggestion.etaMinutes)} min away
+                  Try <b>{suggestion.station.name}</b> instead — about{" "}
+                  {Math.round(suggestion.etaMinutes)} min away, within your{" "}
+                  {batteryMinutes} min range.
                 </Typography>
                 <Button
                   size="small"
@@ -556,14 +581,14 @@ export default function ConsumerApp() {
                   color="warning"
                   fullWidth
                   onClick={acceptSuggestion}
-                  sx={{ mt: 1, borderRadius: 999, textTransform: "none", fontWeight: 700 }}
+                  sx={{ mt: 1, borderRadius: 2, textTransform: "none", fontWeight: 700 }}
                 >
                   Reroute here
                 </Button>
               </Box>
             )}
 
-            {batteryMinutes != null && !suggestion && (
+            {user && batteryMinutes != null && !suggestion && (
               <Typography sx={{ fontSize: 11, mt: 1 }} color="success.main">
                 ✓ Destination is within your battery range.
               </Typography>
@@ -693,13 +718,13 @@ export default function ConsumerApp() {
             elevation={0}
             sx={{
               mt: 1,
-              p: 2,
+              p: 2.5,
               borderRadius: 3,
               bgcolor: "#fff",
               border: "1px solid",
               borderColor: "divider",
               boxShadow: "0 10px 30px rgba(20,45,30,.16)",
-              maxWidth: 520,
+              maxWidth: 420,
             }}
           >
             <FilterBar filters={filters} onChange={setFilters} />
@@ -707,39 +732,20 @@ export default function ConsumerApp() {
         </Collapse>
       </Box>
 
-      <BottomSheet bottomInset={BOTTOM_NAV_HEIGHT}>
+      <BottomSheet
+        bottomInset={BOTTOM_NAV_HEIGHT}
+        onFractionChange={setSheetFraction}
+        onSnapChange={(snapIndex) => {
+          // Expanding the nearby list above its peek closes the station detail panel so
+          // the two never fight for space.
+          if (snapIndex > 0 && selectedId) setSelectedId(null);
+        }}
+      >
         <Stack direction="row" alignItems="baseline" justifyContent="space-between" mb={0.75}>
           <Typography sx={{ fontSize: 15, fontWeight: 700 }}>{VIEW_LABEL[view]}</Typography>
           <Typography variant="caption" color="text.secondary">
             {loading ? "" : `${stations.length} found`}
           </Typography>
-        </Stack>
-
-        {/* Battery range input — when set, each card shows the estimated drive time. */}
-        <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-          <BoltIcon sx={{ fontSize: 18, color: "primary.main" }} />
-          <TextField
-            type="number"
-            size="small"
-            placeholder="Battery time left"
-            value={batteryMinutes ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              setBatteryMinutes(v === "" ? null : Math.max(0, Number(v)));
-            }}
-            InputProps={{
-              endAdornment: (
-                <Typography sx={{ fontSize: 12, color: "text.secondary" }}>min</Typography>
-              ),
-            }}
-            inputProps={{ min: 0, inputMode: "numeric" }}
-            sx={{ flex: 1, maxWidth: 200 }}
-          />
-          {batteryMinutes != null && (
-            <Button size="small" onClick={() => setBatteryMinutes(null)} sx={{ textTransform: "none" }}>
-              Clear
-            </Button>
-          )}
         </Stack>
 
         {loading ? (
@@ -813,17 +819,26 @@ export default function ConsumerApp() {
         </BottomNavigation>
       </Paper>
 
-      {/* Add-station FAB (hidden while placing a pin) */}
+      {/* Add-station FAB: rides just above the top edge of the nearby-charger sheet, so it
+          moves with the sheet as it drags up/down and never overlaps the station detail
+          panel (which is on the right and stops above the sheet). Hidden while pin-placing. */}
       {!pinMode && (
         <Fab
           color="primary"
           variant="extended"
-          onClick={startAddStation}
+          onClick={() => {
+            setSelectedId(null); // close the station dialog if open
+            startAddStation();
+          }}
           sx={{
             position: "absolute",
-            right: 16,
-            bottom: `calc(${BOTTOM_NAV_HEIGHT}px + var(--safe-bottom) + 16px)`,
-            zIndex: 1250,
+            // Right edge normally; shift left of the detail panel (400px + gutter) when it's
+            // open so the two never overlap.
+            right: selectedId ? { xs: 16, md: 428 } : 16,
+            // Sit ~16px above the sheet's top edge (sheet height = sheetFraction of shell).
+            bottom: `calc(${sheetFraction * 100}% + 16px)`,
+            zIndex: 1370,
+            transition: "bottom .2s ease, right .25s ease",
           }}
         >
           <AddRoundedIcon sx={{ mr: 1 }} />
@@ -836,7 +851,12 @@ export default function ConsumerApp() {
         onClose={() => setSelectedId(null)}
         isFavorite={selectedId ? favoriteIds.has(selectedId) : false}
         onToggleFavorite={toggleFavorite}
-        onRequireLogin={() => setAuthOpen(true)}
+        onRequireLogin={() => {
+          // Close the station sheet first so the auth dialog isn't stacked under the
+          // sheet's modal layer (which would make it impossible to dismiss).
+          setSelectedId(null);
+          setAuthOpen(true);
+        }}
         onNavigate={handleNavigate}
       />
       <AuthDialog open={authOpen} onClose={() => setAuthOpen(false)} />

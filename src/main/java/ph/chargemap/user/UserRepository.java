@@ -10,4 +10,8 @@ public interface UserRepository extends MongoRepository<User, ObjectId> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    java.util.List<User> findByRole(Role role);
+
+    java.util.List<User> findByBranchId(ObjectId branchId);
 }

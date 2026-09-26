@@ -4,5 +4,7 @@ package ph.chargemap.user;
 public enum Role {
     USER,
     OPERATOR,
-    ADMIN
+    ADMIN,
+    /** Oversees all admins and branches; also satisfies ADMIN-guarded routes. */
+    SUPER_ADMIN
 }

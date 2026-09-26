@@ -31,6 +31,11 @@ public class User {
 
     private Role role = Role.USER;
 
+    // Admin's assigned branch (null for non-admins or unassigned). Set by SUPER_ADMIN.
+    private ObjectId branchId;
+    // Admin account disabled by a SUPER_ADMIN (cannot act). Distinct from user suspension.
+    private boolean adminDisabled;
+
     private List<Vehicle> vehicles = new ArrayList<>();
     private List<ObjectId> favoriteStationIds = new ArrayList<>();
 
@@ -87,6 +92,22 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public ObjectId getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(ObjectId branchId) {
+        this.branchId = branchId;
+    }
+
+    public boolean isAdminDisabled() {
+        return adminDisabled;
+    }
+
+    public void setAdminDisabled(boolean adminDisabled) {
+        this.adminDisabled = adminDisabled;
     }
 
     public List<Vehicle> getVehicles() {

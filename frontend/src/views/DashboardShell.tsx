@@ -83,7 +83,7 @@ export default function DashboardShell({
   );
 
   return (
-    <Box sx={{ height: "100dvh", display: "flex", bgcolor: "background.default" }}>
+    <Box sx={{ height: "100dvh", width: "100%", flex: 1, display: "flex", bgcolor: "background.default" }}>
       {/* Desktop: in-flow sidebar that actually occupies its width in the flex row.
           (A permanent MUI Drawer renders position:fixed, which collapses to 0 in flex
           and lets the main content slide under it — the bug this replaces.) */}

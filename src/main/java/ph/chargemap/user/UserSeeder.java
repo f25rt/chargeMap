@@ -18,6 +18,7 @@ import java.time.Instant;
  *
  * <p>Demo credentials (dev only):
  * <ul>
+ *   <li>superadmin@chargemap.ph / password123  (SUPER_ADMIN)</li>
  *   <li>admin@chargemap.ph / password123  (ADMIN)</li>
  *   <li>user@chargemap.ph  / password123  (USER)</li>
  *   <li>maria@chargemap.ph / password123  (USER)</li>
@@ -43,6 +44,7 @@ public class UserSeeder {
     @Order(10) // after DemoDataReseeder (order 0)
     public void seed() {
         int created = 0;
+        created += ensureUser("superadmin@chargemap.ph", "Super Admin", Role.SUPER_ADMIN);
         created += ensureUser("admin@chargemap.ph", "Admin", Role.ADMIN);
         created += ensureUser("user@chargemap.ph", "Demo User", Role.USER);
         created += ensureUser("maria@chargemap.ph", "Maria Santos", Role.USER);

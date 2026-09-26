@@ -72,6 +72,12 @@ public class Station {
     // Admin moderation: disabled stations are hidden from consumer results (section 38).
     private boolean disabled;
 
+    // Optional owning branch (assigned by super admin). Null = unassigned.
+    private ObjectId branchId;
+
+    // Denormalized like count (maintained by the social service on like/unlike).
+    private long likeCount;
+
     // Optional station photo stored in GridFS (community submissions / operator uploads).
     private ObjectId imageId;
 
@@ -228,6 +234,22 @@ public class Station {
 
     public void setDisabled(boolean disabled) {
         this.disabled = disabled;
+    }
+
+    public ObjectId getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(ObjectId branchId) {
+        this.branchId = branchId;
+    }
+
+    public long getLikeCount() {
+        return likeCount;
+    }
+
+    public void setLikeCount(long likeCount) {
+        this.likeCount = likeCount;
     }
 
     public ObjectId getImageId() {

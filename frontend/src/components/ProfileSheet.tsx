@@ -19,6 +19,7 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { Button } from "@mui/material";
 import VehiclePanel from "./VehiclePanel";
+import ActivitiesPanel from "./ActivitiesPanel";
 import { api } from "../api/client";
 import type { PointsLedgerEntry, Prize } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
@@ -129,10 +130,17 @@ export default function ProfileSheet({ open, onClose }: Props) {
           </Stack>
         </Card>
 
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ mt: 1 }}>
+        <Tabs
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ mt: 1 }}
+        >
           <Tab label="Rewards" />
-          <Tab label="Activity" />
+          <Tab label="History" />
           <Tab label="Vehicle" />
+          <Tab label="Activities" />
         </Tabs>
       </Box>
 
@@ -215,8 +223,10 @@ export default function ProfileSheet({ open, onClose }: Props) {
               ))
             )}
           </Stack>
-        ) : (
+        ) : tab === 2 ? (
           <VehiclePanel />
+        ) : (
+          <ActivitiesPanel />
         )}
       </Box>
     </Dialog>

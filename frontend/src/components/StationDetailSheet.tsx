@@ -7,6 +7,7 @@ import {
   Divider,
   Drawer,
   IconButton,
+  MenuItem,
   Stack,
   TextField,
   Tooltip,
@@ -21,9 +22,12 @@ import NavigationRoundedIcon from "@mui/icons-material/NavigationRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import FlagRoundedIcon from "@mui/icons-material/FlagRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import ThumbUpRoundedIcon from "@mui/icons-material/ThumbUpRounded";
+import ThumbUpOffAltRoundedIcon from "@mui/icons-material/ThumbUpOffAltRounded";
 import PlaceRoundedIcon from "@mui/icons-material/PlaceRounded";
 import { api } from "../api/client";
 import type { ChargerStatus, StationDetail } from "../api/types";
+import StationReviews from "./StationReviews";
 import { statusDot, statusLabel } from "../theme";
 import { useAuth } from "../auth/AuthContext";
 
@@ -97,6 +101,9 @@ export default function StationDetailSheet({
   const [editAddress, setEditAddress] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [likedByMe, setLikedByMe] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useEffect(() => {
     setMessage(null);
@@ -106,10 +113,39 @@ export default function StationDetailSheet({
     setEditOpen(false);
     setRouteError(null);
     setRouting(false);
+    setLikeCount(0);
+    setLikedByMe(false);
     if (stationId) {
       api.station(stationId).then(setStation).catch(() => setError("Failed to load station"));
+      api
+        .likeStatus(stationId)
+        .then((s) => {
+          setLikeCount(s.likeCount);
+          setLikedByMe(s.likedByMe);
+        })
+        .catch(() => {});
     }
   }, [stationId]);
+
+  const toggleLike = async () => {
+    if (!stationId) return;
+    if (!user) return onRequireLogin();
+    setLikeBusy(true);
+    // optimistic
+    setLikedByMe((v) => !v);
+    setLikeCount((c) => c + (likedByMe ? -1 : 1));
+    try {
+      const s = await api.toggleLike(stationId);
+      setLikeCount(s.likeCount);
+      setLikedByMe(s.likedByMe);
+    } catch {
+      // revert on failure
+      setLikedByMe((v) => !v);
+      setLikeCount((c) => c + (likedByMe ? 1 : -1));
+    } finally {
+      setLikeBusy(false);
+    }
+  };
 
   // Prefill the edit form with the station's current values when it opens.
   useEffect(() => {
@@ -212,18 +248,31 @@ export default function StationDetailSheet({
 
   return (
     <Drawer
+      variant={isDesktop ? "persistent" : "temporary"}
       anchor={isDesktop ? "right" : "bottom"}
       open={!!stationId}
       onClose={onClose}
+      sx={{ zIndex: 1360 }}
       PaperProps={{
         sx: isDesktop
           ? {
-              // Desktop: right-side panel, full height, fixed comfortable width.
-              width: 420,
-              maxWidth: "100vw",
-              height: "100%",
+              // Desktop: right-side panel. Its bottom stops above the nearby-charger sheet
+              // (~20% peek) + bottom nav (64px) so it never overlaps them. `persistent`
+              // means no modal backdrop, so the map + Add-station button stay usable.
+              width: 400,
+              maxWidth: "calc(100vw - 24px)",
+              top: "calc(var(--safe-top) + 58px)",
+              height: "auto",
+              // Sit just above the nearby-charger sheet (its ~20% peek), almost touching.
+              bottom: "calc(20% + 4px)",
+              right: 12,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              borderBottomLeftRadius: 16,
+              borderBottomRightRadius: 16,
+              border: "1px solid rgba(30,60,40,0.10)",
               bgcolor: "#ffffff",
-              boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.16)",
             }
           : {
               // Mobile: bottom sheet, full width (no clipping).
@@ -273,6 +322,28 @@ export default function StationDetailSheet({
                 )}
               </Box>
               <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                <Button
+                  size="small"
+                  onClick={toggleLike}
+                  disabled={likeBusy}
+                  startIcon={
+                    likedByMe ? (
+                      <ThumbUpRoundedIcon sx={{ fontSize: 16 }} />
+                    ) : (
+                      <ThumbUpOffAltRoundedIcon sx={{ fontSize: 16 }} />
+                    )
+                  }
+                  sx={{
+                    minWidth: 0,
+                    px: 1.25,
+                    height: 40,
+                    borderRadius: 999,
+                    bgcolor: likedByMe ? "rgba(31,157,87,.12)" : "#f3f4f6",
+                    color: likedByMe ? "primary.main" : "text.secondary",
+                  }}
+                >
+                  {likeCount}
+                </Button>
                 <IconButton
                   size="small"
                   onClick={() =>
@@ -388,14 +459,12 @@ export default function StationDetailSheet({
                     label="Status"
                     value={reportStatus}
                     onChange={(e) => setReportStatus(e.target.value as ChargerStatus)}
-                    SelectProps={{ native: true }}
-                    InputLabelProps={{ shrink: true }}
                     sx={{ flex: 1 }}
                   >
                     {REPORT_STATUSES.map((s) => (
-                      <option key={s} value={s}>
+                      <MenuItem key={s} value={s}>
                         {statusLabel(s)}
-                      </option>
+                      </MenuItem>
                     ))}
                   </TextField>
                   <TextField
@@ -405,15 +474,13 @@ export default function StationDetailSheet({
                     label="Charger"
                     value={reportCharger}
                     onChange={(e) => setReportCharger(e.target.value)}
-                    SelectProps={{ native: true }}
-                    InputLabelProps={{ shrink: true }}
                     sx={{ flex: 1 }}
                   >
-                    <option value="">Whole station</option>
+                    <MenuItem value="">Whole station</MenuItem>
                     {station.chargers.map((c, i) => (
-                      <option key={c.chargerId} value={c.chargerId}>
+                      <MenuItem key={c.chargerId} value={c.chargerId}>
                         #{i + 1} {c.connectorType}
-                      </option>
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Stack>
@@ -470,6 +537,11 @@ export default function StationDetailSheet({
                 </Stack>
               </Box>
             </Collapse>
+
+            <Divider sx={{ my: 2 }} />
+
+            {/* Reviews / comments */}
+            <StationReviews stationId={station.id} onRequireLogin={onRequireLogin} />
           </Box>
 
           {/* Bottom-pinned actions */}

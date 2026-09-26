@@ -21,6 +21,16 @@ import type {
   ConnectedVehicle,
   VehicleLocation,
   VehicleSyncResult,
+  Branch,
+  AdminSummary,
+  BranchPriceTrend,
+  StationUpdateFrequency,
+  Activity,
+  UserActivity,
+  ActivityCompletionStat,
+  StationReview,
+  LikeStatus,
+  LikeTrendPoint,
 } from "./types";
 
 const TOKEN_KEY = "chargemap.token";
@@ -284,4 +294,102 @@ export const api = {
 
   disconnectVehicle: (id: string) =>
     http.delete(`/api/vehicle/${id}`).then((r) => r.data),
+
+  // ----- Super admin: branches + admin oversight -----
+  branches: () => http.get<Branch[]>("/api/superadmin/branches").then((r) => r.data),
+
+  createBranch: (b: { name: string; description?: string; area?: string }) =>
+    http.post<Branch>("/api/superadmin/branches", b).then((r) => r.data),
+
+  updateBranch: (id: string, b: { name?: string; description?: string; area?: string }) =>
+    http.put<Branch>(`/api/superadmin/branches/${id}`, b).then((r) => r.data),
+
+  setBranchImage: (id: string, kind: "profile" | "banner", file: File) => {
+    const fd = new FormData();
+    fd.append("kind", kind);
+    fd.append("image", file);
+    return http.put<Branch>(`/api/superadmin/branches/${id}/image`, fd).then((r) => r.data);
+  },
+
+  assignAdminToBranch: (branchId: string, userId: string) =>
+    http.post(`/api/superadmin/branches/${branchId}/admins/${userId}`).then((r) => r.data),
+
+  assignStationToBranch: (branchId: string, stationId: string) =>
+    http.post(`/api/superadmin/branches/${branchId}/stations/${stationId}`).then((r) => r.data),
+
+  admins: () => http.get<AdminSummary[]>("/api/superadmin/admins").then((r) => r.data),
+
+  reassignAdminBranch: (adminId: string, branchId: string | null) =>
+    http.put<AdminSummary>(`/api/superadmin/admins/${adminId}/branch`, { branchId }).then((r) => r.data),
+
+  disableAdmin: (adminId: string) =>
+    http.post<AdminSummary>(`/api/superadmin/admins/${adminId}/disable`).then((r) => r.data),
+
+  enableAdmin: (adminId: string) =>
+    http.post<AdminSummary>(`/api/superadmin/admins/${adminId}/enable`).then((r) => r.data),
+
+  // ----- Metrics -----
+  branchPriceTrend: (days = 7) =>
+    http
+      .get<BranchPriceTrend[]>("/api/moderation/metrics/branch-price-trend", { params: { days } })
+      .then((r) => r.data),
+
+  stationUpdateFrequency: (stationId: string, days = 30) =>
+    http
+      .get<StationUpdateFrequency>(`/api/moderation/metrics/station/${stationId}/update-frequency`, {
+        params: { days },
+      })
+      .then((r) => r.data),
+
+  // ----- Activities -----
+  moderationActivities: () => http.get<Activity[]>("/api/moderation/activities").then((r) => r.data),
+
+  createActivity: (a: { title: string; description?: string; goalCount: number; rewardPrizeId?: string }) =>
+    http.post<Activity>("/api/moderation/activities", a).then((r) => r.data),
+
+  activityMetrics: () =>
+    http.get<ActivityCompletionStat[]>("/api/moderation/activities/metrics").then((r) => r.data),
+
+  myActivities: () => http.get<UserActivity[]>("/api/activities").then((r) => r.data),
+
+  chooseActivity: (id: string) =>
+    http.post<UserActivity>(`/api/activities/${id}/choose`).then((r) => r.data),
+
+  // ----- Self profile (admin + user) -----
+  updateName: (name: string) =>
+    http.put<UserProfile>("/api/users/me", { name }).then((r) => r.data),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    http.post("/api/users/me/password", { currentPassword, newPassword }).then((r) => r.data),
+
+  // ----- Station reviews + likes -----
+  stationReviews: (stationId: string) =>
+    http.get<StationReview[]>(`/api/stations/${stationId}/reviews`).then((r) => r.data),
+
+  createReview: (stationId: string, text: string, image: File | null) => {
+    const fd = new FormData();
+    if (text) fd.append("text", text);
+    if (image) fd.append("image", image);
+    return http.post<StationReview>(`/api/stations/${stationId}/reviews`, fd).then((r) => r.data);
+  },
+
+  editReview: (reviewId: string, text: string, image: File | null) => {
+    const fd = new FormData();
+    fd.append("text", text);
+    if (image) fd.append("image", image);
+    return http.put<StationReview>(`/api/reviews/${reviewId}`, fd).then((r) => r.data);
+  },
+
+  deleteReview: (reviewId: string) => http.delete(`/api/reviews/${reviewId}`).then((r) => r.data),
+
+  likeStatus: (stationId: string) =>
+    http.get<LikeStatus>(`/api/stations/${stationId}/like`).then((r) => r.data),
+
+  toggleLike: (stationId: string) =>
+    http.post<LikeStatus>(`/api/stations/${stationId}/like`).then((r) => r.data),
+
+  branchLikeTrend: (days = 7) =>
+    http
+      .get<LikeTrendPoint[]>("/api/moderation/metrics/branch-like-trend", { params: { days } })
+      .then((r) => r.data),
 };

@@ -47,9 +47,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.parse(token);
                 String userId = claims.getSubject();
                 String role = claims.get("role", String.class);
-                var authority = new SimpleGrantedAuthority("ROLE_" + role);
+                // A SUPER_ADMIN also holds ROLE_ADMIN so it satisfies every ADMIN-guarded
+                // route without duplicating rules; it additionally holds ROLE_SUPER_ADMIN
+                // for super-admin-only routes.
+                List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                if ("SUPER_ADMIN".equals(role)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                }
                 var authentication = new UsernamePasswordAuthenticationToken(
-                        userId, null, List.of(authority));
+                        userId, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException | IllegalArgumentException ex) {

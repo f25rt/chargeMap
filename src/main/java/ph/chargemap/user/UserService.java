@@ -60,6 +60,31 @@ public class UserService {
         return TokenResponse.bearer(token, expiryMinutes * 60);
     }
 
+    /** Updates the current user's display name. */
+    public UserProfileDto updateName(String name) {
+        User user = requireCurrentUser();
+        if (name == null || name.isBlank()) {
+            throw new ph.chargemap.common.error.BadRequestException("Name is required");
+        }
+        user.setName(name.trim());
+        user.setUpdatedAt(Instant.now());
+        return UserProfileDto.from(userRepository.save(user));
+    }
+
+    /** Changes the current user's password after verifying the current one. */
+    public void changePassword(String currentPassword, String newPassword) {
+        User user = requireCurrentUser();
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ph.chargemap.common.error.BadRequestException("Current password is incorrect");
+        }
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new ph.chargemap.common.error.BadRequestException("New password must be at least 8 characters");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+    }
+
     public UserProfileDto me() {
         return UserProfileDto.from(requireCurrentUser());
     }

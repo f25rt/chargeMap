@@ -35,6 +35,7 @@ public record StationDetailDto(
         Instant lastVerified,
         Instant lastUpdated,
         boolean disabled,
-        String imageId
+        String imageId,
+        long likeCount
 ) {
 }

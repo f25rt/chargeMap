@@ -26,7 +26,7 @@ export default function App() {
     );
   }
 
-  if (user?.role === "ADMIN") return <AdminApp />;
+  if (user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") return <AdminApp />;
   if (user?.role === "OPERATOR") return <OperatorApp />;
   return <ConsumerApp />;
 }

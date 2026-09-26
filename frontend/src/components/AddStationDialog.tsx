@@ -6,6 +6,7 @@ import {
   Dialog,
   IconButton,
   LinearProgress,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -235,14 +236,13 @@ export default function AddStationDialog({
               label="Connector"
               value={connector}
               onChange={(e) => setConnector(e.target.value)}
-              SelectProps={{ native: true }}
               InputLabelProps={{ shrink: true }}
               fullWidth
             >
               {CONNECTORS.map((c) => (
-                <option key={c} value={c}>
+                <MenuItem key={c} value={c}>
                   {c || "—"}
-                </option>
+                </MenuItem>
               ))}
             </TextField>
             <TextField
@@ -250,14 +250,13 @@ export default function AddStationDialog({
               label="Type"
               value={chargerType}
               onChange={(e) => setChargerType(e.target.value)}
-              SelectProps={{ native: true }}
               InputLabelProps={{ shrink: true }}
               fullWidth
             >
               {CHARGER_TYPES.map((c) => (
-                <option key={c} value={c}>
+                <MenuItem key={c} value={c}>
                   {c ? c.replace("_", " ") : "—"}
-                </option>
+                </MenuItem>
               ))}
             </TextField>
             <TextField

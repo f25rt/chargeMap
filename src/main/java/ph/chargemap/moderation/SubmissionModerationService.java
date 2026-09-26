@@ -42,15 +42,18 @@ public class SubmissionModerationService {
     private final StationRepository stationRepository;
     private final UserService userService;
     private final PointsService pointsService;
+    private final ph.chargemap.activity.ActivityService activityService;
 
     public SubmissionModerationService(StationSubmissionRepository submissionRepository,
                                        StationRepository stationRepository,
                                        UserService userService,
-                                       PointsService pointsService) {
+                                       PointsService pointsService,
+                                       ph.chargemap.activity.ActivityService activityService) {
         this.submissionRepository = submissionRepository;
         this.stationRepository = stationRepository;
         this.userService = userService;
         this.pointsService = pointsService;
+        this.activityService = activityService;
     }
 
     public List<SubmissionDto> list(SubmissionStatus status) {
@@ -210,6 +213,8 @@ public class SubmissionModerationService {
         submissionRepository.save(s);
 
         pointsService.award(s.getSubmittedBy(), TaskType.STATION_UPDATE, saved.getId());
+        // Advance any in-progress task activities for this contributor.
+        activityService.recordApprovedStationUpdate(s.getSubmittedBy());
         return SubmissionDto.from(s);
     }
 

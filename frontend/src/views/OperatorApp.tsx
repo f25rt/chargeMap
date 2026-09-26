@@ -7,6 +7,7 @@ import {
   CircularProgress,
   Divider,
   InputAdornment,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -135,7 +136,6 @@ function StationsPanel() {
                 <TextField
                   select
                   size="small"
-                  SelectProps={{ native: true }}
                   value={c.status}
                   disabled={savingId === c.chargerId}
                   onChange={(e) =>
@@ -144,9 +144,9 @@ function StationsPanel() {
                   sx={{ width: 140 }}
                 >
                   {STATUSES.map((st) => (
-                    <option key={st} value={st}>
+                    <MenuItem key={st} value={st}>
                       {statusLabel(st)}
-                    </option>
+                    </MenuItem>
                   ))}
                 </TextField>
               </Stack>

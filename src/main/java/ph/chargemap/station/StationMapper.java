@@ -71,7 +71,8 @@ public class StationMapper {
                 s.getLastVerified(),
                 s.getLastUpdated(),
                 s.isDisabled(),
-                s.getImageId() == null ? null : s.getImageId().toHexString()
+                s.getImageId() == null ? null : s.getImageId().toHexString(),
+                s.getLikeCount()
         );
     }
 

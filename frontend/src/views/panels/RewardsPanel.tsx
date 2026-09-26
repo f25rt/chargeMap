@@ -16,8 +16,9 @@ import PhotoCameraRoundedIcon from "@mui/icons-material/PhotoCameraRounded";
 import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import { useRef } from "react";
 import { Avatar } from "@mui/material";
+import { LinearProgress, MenuItem } from "@mui/material";
 import { api } from "../../api/client";
-import type { PointRules, Prize } from "../../api/types";
+import type { ActivityCompletionStat, PointRules, Prize } from "../../api/types";
 
 export default function RewardsPanel() {
   const [prizes, setPrizes] = useState<Prize[]>([]);
@@ -33,14 +34,44 @@ export default function RewardsPanel() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Activities + completion metrics
+  const [activityStats, setActivityStats] = useState<ActivityCompletionStat[]>([]);
+  const [actTitle, setActTitle] = useState("");
+  const [actGoal, setActGoal] = useState("3");
+  const [actPrizeId, setActPrizeId] = useState("");
+  const [actSaving, setActSaving] = useState(false);
+
   const load = async () => {
     setLoading(true);
     try {
-      const [p, r] = await Promise.all([api.moderationPrizes(), api.pointRules()]);
+      const [p, r, stats] = await Promise.all([
+        api.moderationPrizes(),
+        api.pointRules(),
+        api.activityMetrics(),
+      ]);
       setPrizes(p);
       setRules(r);
+      setActivityStats(stats);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createActivity = async () => {
+    if (!actTitle.trim() || actGoal === "") return;
+    setActSaving(true);
+    try {
+      await api.createActivity({
+        title: actTitle.trim(),
+        goalCount: Number(actGoal),
+        rewardPrizeId: actPrizeId || undefined,
+      });
+      setActTitle("");
+      setActGoal("3");
+      setActPrizeId("");
+      await load();
+    } finally {
+      setActSaving(false);
     }
   };
 
@@ -112,7 +143,106 @@ export default function RewardsPanel() {
     />
   );
 
+  const maxCompletions = activityStats.reduce((m, s) => Math.max(m, s.completions), 0) || 1;
+
   return (
+    <Stack spacing={3}>
+      {/* Task activities: create + completion study */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "1.4fr 1fr" },
+          gap: 3,
+          alignItems: "start",
+        }}
+      >
+        <Card sx={{ p: 2 }}>
+          <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+            <EmojiEventsRoundedIcon color="primary" />
+            <Typography variant="subtitle1">Task activities</Typography>
+          </Stack>
+          <Divider sx={{ mb: 1.5 }} />
+          <Typography variant="caption" color="text.secondary">
+            Create an activity users can take on. When they complete the goal (that many
+            approved station updates), the linked reward is granted.
+          </Typography>
+          <Stack spacing={1.5} mt={1.5}>
+            <TextField
+              size="small"
+              label="Activity title"
+              value={actTitle}
+              onChange={(e) => setActTitle(e.target.value)}
+              fullWidth
+            />
+            <Stack direction="row" spacing={1.5}>
+              <TextField
+                size="small"
+                type="number"
+                label="Goal (approved updates)"
+                value={actGoal}
+                onChange={(e) => setActGoal(e.target.value)}
+                sx={{ width: 200 }}
+              />
+              <TextField
+                select
+                size="small"
+                label="Reward"
+                value={actPrizeId}
+                onChange={(e) => setActPrizeId(e.target.value)}
+                sx={{ flex: 1 }}
+              >
+                <MenuItem value="">No reward</MenuItem>
+                {prizes.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name} ({p.pointCost} pts)
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+            <Button
+              variant="contained"
+              startIcon={<AddRoundedIcon />}
+              onClick={createActivity}
+              disabled={actSaving || !actTitle.trim() || actGoal === ""}
+            >
+              Create activity
+            </Button>
+          </Stack>
+        </Card>
+
+        <Card sx={{ p: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Most-completed rewards
+          </Typography>
+          <Divider sx={{ mb: 1.5 }} />
+          {activityStats.length === 0 ? (
+            <Typography color="text.secondary" py={2} textAlign="center">
+              No activities yet.
+            </Typography>
+          ) : (
+            <Stack spacing={1.25}>
+              {activityStats.map((s) => (
+                <Box key={s.activityId}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" fontWeight={600} noWrap>
+                      {s.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {s.completions}
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    value={(s.completions / maxCompletions) * 100}
+                    sx={{ mt: 0.5, height: 6, borderRadius: 3 }}
+                  />
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </Card>
+      </Box>
+
     <Box
       sx={{
         display: "grid",
@@ -292,5 +422,6 @@ export default function RewardsPanel() {
         </Stack>
       </Card>
     </Box>
+    </Stack>
   );
 }

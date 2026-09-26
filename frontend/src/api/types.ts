@@ -55,6 +55,7 @@ export interface StationDetail extends StationSummary {
   currentPricing: Pricing | null;
   lastVerified: string | null;
   disabled: boolean;
+  likeCount: number;
 }
 
 export interface PageResponse<T> {
@@ -77,6 +78,7 @@ export interface UserProfile {
   email: string;
   name: string;
   role: string;
+  branchId: string | null;
   vehicleCount: number;
   favoriteCount: number;
   suspended: boolean;
@@ -279,4 +281,94 @@ export interface ConnectVehicleRequest {
   locationConsent?: boolean;
   chargeTargetPercent?: number;
   authCode?: string;
+}
+
+// ----- Branches, Super Admin, Metrics, Activities -----
+
+export interface Branch {
+  id: string;
+  name: string;
+  description: string | null;
+  area: string | null;
+  profileImageId: string | null;
+  bannerImageId: string | null;
+  createdAt: string | null;
+}
+
+export interface AdminSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  branchId: string | null;
+  adminDisabled: boolean;
+}
+
+export interface BranchPriceTrend {
+  branchId: string | null;
+  branchName: string;
+  priceChanges: number;
+}
+
+export interface StationUpdateFrequency {
+  stationId: string;
+  stationName: string;
+  approvedUpdates: number;
+  priceChanges: number;
+  windowDays: number;
+}
+
+export interface Activity {
+  id: string;
+  title: string;
+  description: string | null;
+  goalType: string;
+  goalCount: number;
+  rewardPrizeId: string | null;
+  active: boolean;
+  createdAt: string | null;
+}
+
+export interface UserActivity {
+  activityId: string;
+  title: string;
+  description: string | null;
+  goalCount: number;
+  rewardPrizeId: string | null;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+  progress: number;
+  grantedPrizeId: string | null;
+}
+
+export interface ActivityCompletionStat {
+  activityId: string;
+  title: string;
+  rewardPrizeId: string | null;
+  completions: number;
+}
+
+// ----- Station reviews + likes -----
+
+export interface StationReview {
+  id: string;
+  stationId: string;
+  userId: string;
+  authorName: string;
+  text: string | null;
+  imageId: string | null;
+  mine: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface LikeStatus {
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+export interface LikeTrendPoint {
+  date: string;
+  likes: number;
+  unlikes: number;
+  net: number;
 }

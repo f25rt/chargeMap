@@ -94,9 +94,69 @@ export const theme = createTheme({
         },
       },
     },
+    // ---- Inputs & selects: consistent, modern, softly-rounded fields ----
+    MuiTextField: {
+      defaultProps: { variant: "outlined" },
+    },
+    MuiInputBase: {
+      styleOverrides: {
+        // The typed text itself: app font, comfortable size, no letter cramping.
+        input: {
+          fontFamily: "Inter, system-ui, sans-serif",
+          fontSize: 14.5,
+          letterSpacing: 0,
+          "&::placeholder": { color: "#9aa79f", opacity: 1 },
+        },
+      },
+    },
     MuiOutlinedInput: {
       styleOverrides: {
-        root: { borderRadius: 16 },
+        root: {
+          borderRadius: 12,
+          backgroundColor: "#f7f9f6",
+          transition: "background-color .15s ease, box-shadow .15s ease",
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "rgba(30,60,40,0.14)",
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: "rgba(30,60,40,0.28)",
+          },
+          "&.Mui-focused": {
+            backgroundColor: "#fff",
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: "#1f9d57",
+              borderWidth: 1.5,
+            },
+          },
+        },
+        input: { padding: "12px 14px" },
+        inputSizeSmall: { padding: "9px 12px" },
+      },
+    },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          fontFamily: "Inter, system-ui, sans-serif",
+          fontSize: 14,
+          color: "#5d6b62",
+          "&.Mui-focused": { color: "#16773f" },
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        // MUI (non-native) select surface matches the text fields.
+        select: { fontFamily: "Inter, system-ui, sans-serif", fontSize: 14.5 },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: { fontFamily: "Inter, system-ui, sans-serif", fontSize: 14.5 },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: { borderRadius: 12, boxShadow: softShadow(8, 26, 0.16) },
       },
     },
   },

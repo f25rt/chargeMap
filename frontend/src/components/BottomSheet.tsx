@@ -11,9 +11,18 @@ const SNAPS = [0.2, 0.55, 0.92]; // peek, half, full
 interface Props {
   children: ReactNode;
   bottomInset: number; // px reserved for the bottom nav
+  /** Fired with the snap index (0=peek,1=half,2=full) whenever it changes. */
+  onSnapChange?: (snapIndex: number) => void;
+  /** Fired with the live height fraction (0..1) as the sheet resizes/drags. */
+  onFractionChange?: (fraction: number) => void;
 }
 
-export default function BottomSheet({ children, bottomInset }: Props) {
+export default function BottomSheet({
+  children,
+  bottomInset,
+  onSnapChange,
+  onFractionChange,
+}: Props) {
   const [snap, setSnap] = useState(0); // start at "peek" (compact)
   const containerRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ startY: number; startFrac: number } | null>(null);
@@ -21,7 +30,14 @@ export default function BottomSheet({ children, bottomInset }: Props) {
 
   useEffect(() => {
     setFrac(SNAPS[snap]);
+    onSnapChange?.(snap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap]);
+
+  useEffect(() => {
+    onFractionChange?.(frac);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frac]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);

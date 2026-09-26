@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/prizes").permitAll()
                         // Role-guarded management areas
+                        .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/operator/**").hasAnyRole("OPERATOR", "ADMIN")
                         .requestMatchers("/api/moderation/**").hasAnyRole("OPERATOR", "ADMIN")

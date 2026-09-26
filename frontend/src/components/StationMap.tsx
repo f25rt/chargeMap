@@ -7,21 +7,32 @@ import { availabilityHex } from "../theme";
 // Fix Leaflet's default icon paths (harmless; we use custom divIcons).
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 
-/** A pill marker showing price + availability color; enlarges when selected. */
+/**
+ * A station marker: a rounded pill with an EV-station glyph (or the branch's icon when
+ * one is set) + price, colored by availability. Enlarges when selected.
+ */
 function priceIcon(station: StationSummary, selected: boolean): L.DivIcon {
   const color = availabilityHex(station.availabilitySummary);
   const price = station.pricePerKwh != null ? `₱${station.pricePerKwh}` : "—";
   const scale = selected ? 1.15 : 1;
-  const ring = selected ? "box-shadow:0 0 0 4px rgba(27,143,77,.35),0 2px 6px rgba(0,0,0,.4);" : "box-shadow:0 2px 6px rgba(0,0,0,.4);";
+  const ring = selected
+    ? "box-shadow:0 0 0 4px rgba(27,143,77,.35),0 2px 6px rgba(0,0,0,.4);"
+    : "box-shadow:0 2px 6px rgba(0,0,0,.4);";
+  // Branch icon (custom image) if provided, else a default EV-charger glyph.
+  const branchIcon = (station as StationSummary & { branchIconUrl?: string | null }).branchIconUrl;
+  const glyph = branchIcon
+    ? `<img src="${branchIcon}" style="width:14px;height:14px;border-radius:3px;object-fit:cover;margin-right:3px;" />`
+    : `<svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" style="margin-right:3px;flex-shrink:0;"><path d="M7 2h7a2 2 0 0 1 2 2v7h1a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V9l-2.5-2.5 1-1L22 8.2V17a3.5 3.5 0 0 1-7 0v-4h-1v9H5V4a2 2 0 0 1 2-2Zm0 2v6h7V4H7Z"/></svg>`;
   return L.divIcon({
     className: "chargemap-marker",
     html: `<div style="
       transform:scale(${scale});transform-origin:center bottom;
+      display:flex;align-items:center;
       background:${color};color:#fff;font:700 12px Roboto,sans-serif;
       padding:4px 9px;border-radius:14px;white-space:nowrap;
-      border:2px solid #fff;${ring}">${price}</div>`,
-    iconSize: [50, 24],
-    iconAnchor: [25, 12],
+      border:2px solid #fff;${ring}">${glyph}${price}</div>`,
+    iconSize: [64, 24],
+    iconAnchor: [32, 12],
   });
 }
 
@@ -68,12 +79,17 @@ function PinPicker({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   return null;
 }
 
-/** Fits the map to the route bounds when a route is present. */
+/**
+ * Fits the map to the route when one is present. We only fit to the route's own bounds
+ * (origin → destination) with generous padding; nearby station markers keep rendering
+ * and remain visible around the route rather than being zoomed out of view.
+ */
 function FitRoute({ route }: { route: [number, number][] | null }) {
   const map = useMap();
   useEffect(() => {
     if (route && route.length > 1) {
-      map.fitBounds(route as L.LatLngBoundsExpression, { padding: [40, 40] });
+      const bounds = L.latLngBounds(route as L.LatLngExpression[]);
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
     }
   }, [route, map]);
   return null;
@@ -112,16 +128,19 @@ interface Props {
   origin?: [number, number] | null;
 }
 
-/** A blue dot marker for the user's current location (route origin). */
+/** A car marker for the user's current location (route origin). */
 function originIcon(): L.DivIcon {
   return L.divIcon({
     className: "chargemap-origin",
     html: `<div style="
-      width:16px;height:16px;border-radius:50%;
+      width:34px;height:34px;border-radius:50%;
       background:#2563eb;border:3px solid #fff;
-      box-shadow:0 0 0 4px rgba(37,99,235,.3);"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 0 4px rgba(37,99,235,.25),0 2px 6px rgba(0,0,0,.35);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h12v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-8l-2.08-5.99ZM6.5 16a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM5 11l1.5-4.5h11L19 11H5Z"/></svg>
+      </div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
   });
 }
 

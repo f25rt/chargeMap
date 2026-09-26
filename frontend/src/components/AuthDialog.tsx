@@ -69,6 +69,10 @@ export default function AuthDialog({ open, onClose }: Props) {
       const status = (e as { response?: { status?: number } })?.response?.status;
       if (status === 409) setError("That email is already registered.");
       else if (status === 401) setError("Invalid email or password.");
+      else if (status === 404)
+        setError("Can't reach the server (login endpoint not found). Check the API URL/rewrites.");
+      else if (status == null)
+        setError("Can't reach the server. Please check your connection and try again.");
       else setError("Something went wrong. Check the details and try again.");
     } finally {
       setBusy(false);

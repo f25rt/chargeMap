@@ -54,6 +54,22 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
+// Guard against a misconfigured API rewrite: if an /api/* call gets HTML back (e.g. the
+// SPA index.html because the /api rewrite didn't match), treat it as a routing error
+// instead of silently accepting a non-JSON body.
+http.interceptors.response.use((response) => {
+  const url = response.config?.url ?? "";
+  const contentType = String(response.headers?.["content-type"] ?? "");
+  if (url.startsWith("/api/") && contentType.includes("text/html")) {
+    return Promise.reject(
+      Object.assign(new Error("API request was not routed to the backend"), {
+        response: { status: 502, data: { code: "API_MISROUTED" } },
+      }),
+    );
+  }
+  return response;
+});
+
 /** Builds a query object from filters, dropping empty values. */
 function filterParams(filters?: StationFilters): Record<string, unknown> {
   const params: Record<string, unknown> = {};

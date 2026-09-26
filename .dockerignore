@@ -1,0 +1,12 @@
+# Keep the backend build context lean and secret-free.
+target/
+.git/
+.idea/
+.vscode/
+frontend/
+docs/
+specs/
+*.log
+.env
+.env.*
+*.md

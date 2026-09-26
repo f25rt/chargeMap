@@ -17,3 +17,5 @@ Thumbs.db
 # Secrets / local env
 .env
 *.local
+.env.production
+.env.*.local

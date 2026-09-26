@@ -1,8 +1,10 @@
 package ph.chargemap.branch;
 
 import org.bson.types.ObjectId;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import ph.chargemap.common.error.BadRequestException;
+import ph.chargemap.common.error.ConflictException;
 import ph.chargemap.common.error.NotFoundException;
 import ph.chargemap.user.Role;
 import ph.chargemap.user.User;
@@ -12,14 +14,48 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Stream;
 
-/** Super-admin oversight of admins: list, reassign branch, disable/enable. */
+/** Super-admin oversight of admins: create, list, reassign branch, disable/enable. */
 @Service
 public class SuperAdminService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public SuperAdminService(UserRepository userRepository) {
+    public SuperAdminService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /** Creates a new ADMIN account (super-admin only). Optionally assigns a branch. */
+    public AdminSummaryDto createAdmin(String email, String name, String password, String branchId) {
+        if (email == null || email.isBlank()) {
+            throw new BadRequestException("Email is required");
+        }
+        if (name == null || name.isBlank()) {
+            throw new BadRequestException("Name is required");
+        }
+        if (password == null || password.length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters");
+        }
+        String normalized = email.trim().toLowerCase();
+        if (userRepository.existsByEmail(normalized)) {
+            throw new ConflictException("Email already registered");
+        }
+        User u = new User();
+        u.setEmail(normalized);
+        u.setName(name.trim());
+        u.setPasswordHash(passwordEncoder.encode(password));
+        u.setRole(Role.ADMIN);
+        if (branchId != null && !branchId.isBlank()) {
+            if (!ObjectId.isValid(branchId)) {
+                throw new BadRequestException("Invalid branch id");
+            }
+            u.setBranchId(new ObjectId(branchId));
+        }
+        Instant now = Instant.now();
+        u.setCreatedAt(now);
+        u.setUpdatedAt(now);
+        return AdminSummaryDto.from(userRepository.save(u));
     }
 
     /** All ADMIN + SUPER_ADMIN accounts. */

@@ -1,0 +1,60 @@
+# Production stack for a DigitalOcean droplet.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Env comes from a `.env.production` file next to this one (see .env.production.example).
+# MongoDB is expected to be Atlas (set MONGODB_URI). Redis runs as a local container.
+# The frontend (Nginx) serves the SPA and proxies /api + /actuator to the backend.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chargemap-backend
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      SERVER_PORT: "8080"
+    depends_on:
+      redis:
+        condition: service_started
+    expose:
+      - "8080"          # internal only; reached via the frontend proxy
+    networks:
+      - chargemap
+
+  redis:
+    image: redis:7-alpine
+    container_name: chargemap-redis
+    restart: unless-stopped
+    volumes:
+      - chargemap-redis-data:/data
+    networks:
+      - chargemap
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Vite inlines this at build time; supply via `--build-arg` or a shell export.
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+    container_name: chargemap-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"          # public HTTP; put Caddy/Certbot in front for HTTPS (see guide)
+    networks:
+      - chargemap
+
+networks:
+  chargemap:
+    driver: bridge
+
+volumes:
+  chargemap-redis-data:

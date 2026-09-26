@@ -1,0 +1,20 @@
+# Production profile overrides. Activated with SPRING_PROFILES_ACTIVE=prod.
+# All secrets/URIs come from environment variables (see .env.production.example).
+# The dev-only seeders (@Profile("dev")) do NOT run under this profile.
+
+management:
+  endpoint:
+    health:
+      # Don't leak internal details publicly; the frontend/proxy only needs UP/DOWN.
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# Tighten multipart to the app's 8 MB image limit (defense in depth alongside Nginx).
+spring:
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 10MB

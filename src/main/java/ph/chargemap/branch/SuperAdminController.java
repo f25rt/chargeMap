@@ -71,6 +71,13 @@ public class SuperAdminController {
         return superAdminService.listAdmins();
     }
 
+    /** Create a new admin account (super-admin only). */
+    @PostMapping("/admins")
+    public AdminSummaryDto createAdmin(@RequestBody Map<String, String> body) {
+        return superAdminService.createAdmin(
+                body.get("email"), body.get("name"), body.get("password"), body.get("branchId"));
+    }
+
     @PutMapping("/admins/{id}/branch")
     public AdminSummaryDto reassignBranch(@PathVariable String id,
                                           @RequestBody Map<String, String> body) {

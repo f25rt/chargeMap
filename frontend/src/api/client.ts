@@ -41,8 +41,10 @@ export const tokenStore = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 };
 
-// Same-origin base; Vite proxies /api to the backend in dev.
-const http = axios.create({ baseURL: "" });
+// API base URL. Empty (default) = same-origin: Vite proxies /api in dev, and in
+// production a reverse proxy / Render rewrite forwards /api to the backend. Set
+// VITE_API_BASE_URL to the backend's full URL if you deploy the two on separate origins.
+const http = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL ?? "" });
 
 http.interceptors.request.use((config) => {
   const token = tokenStore.get();
@@ -318,6 +320,9 @@ export const api = {
     http.post(`/api/superadmin/branches/${branchId}/stations/${stationId}`).then((r) => r.data),
 
   admins: () => http.get<AdminSummary[]>("/api/superadmin/admins").then((r) => r.data),
+
+  createAdmin: (a: { email: string; name: string; password: string; branchId?: string }) =>
+    http.post<AdminSummary>("/api/superadmin/admins", a).then((r) => r.data),
 
   reassignAdminBranch: (adminId: string, branchId: string | null) =>
     http.put<AdminSummary>(`/api/superadmin/admins/${adminId}/branch`, { branchId }).then((r) => r.data),

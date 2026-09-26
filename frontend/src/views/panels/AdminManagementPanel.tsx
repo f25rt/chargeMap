@@ -14,15 +14,25 @@ import {
 } from "@mui/material";
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import PersonAddRoundedIcon from "@mui/icons-material/PersonAddRounded";
 import { api } from "../../api/client";
 import type { AdminSummary, Branch } from "../../api/types";
 
-/** Super-admin oversight of admins: reassign branch, disable/enable. */
+/** Super-admin oversight of admins: create, reassign branch, disable/enable. */
 export default function AdminManagementPanel() {
   const [admins, setAdmins] = useState<AdminSummary[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Create-admin form
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newBranch, setNewBranch] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createMsg, setCreateMsg] = useState<string | null>(null);
+  const [createErr, setCreateErr] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -38,6 +48,35 @@ export default function AdminManagementPanel() {
   useEffect(() => {
     load();
   }, []);
+
+  const createAdmin = async () => {
+    setCreateMsg(null);
+    setCreateErr(null);
+    if (!newEmail.trim() || !newName.trim() || newPassword.length < 8) {
+      setCreateErr("Email, name, and a password of at least 8 characters are required.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await api.createAdmin({
+        email: newEmail.trim(),
+        name: newName.trim(),
+        password: newPassword,
+        branchId: newBranch || undefined,
+      });
+      setNewEmail("");
+      setNewName("");
+      setNewPassword("");
+      setNewBranch("");
+      setCreateMsg("Admin account created.");
+      await load();
+    } catch (e: unknown) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      setCreateErr(status === 409 ? "That email is already registered." : "Could not create admin.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const branchName = (id: string | null) =>
     id ? branches.find((b) => b.id === id)?.name ?? "(unknown)" : "Unassigned";
@@ -71,11 +110,78 @@ export default function AdminManagementPanel() {
   }
 
   return (
-    <Card sx={{ p: 2 }}>
-      <Typography variant="subtitle1" gutterBottom>
-        Admins
-      </Typography>
-      <Divider sx={{ mb: 1 }} />
+    <Stack spacing={3}>
+      {/* Create admin */}
+      <Card sx={{ p: 2 }}>
+        <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+          <PersonAddRoundedIcon color="primary" />
+          <Typography variant="subtitle1">Create admin</Typography>
+        </Stack>
+        <Divider sx={{ mb: 2 }} />
+        {createMsg && <Alert severity="success" sx={{ mb: 1.5 }}>{createMsg}</Alert>}
+        {createErr && <Alert severity="error" sx={{ mb: 1.5 }}>{createErr}</Alert>}
+        <Stack spacing={1.5}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            <TextField
+              size="small"
+              label="Name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              fullWidth
+            />
+            <TextField
+              size="small"
+              label="Email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              fullWidth
+            />
+          </Stack>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            <TextField
+              size="small"
+              label="Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              helperText="At least 8 characters"
+              fullWidth
+            />
+            <TextField
+              select
+              size="small"
+              label="Branch (optional)"
+              value={newBranch}
+              onChange={(e) => setNewBranch(e.target.value)}
+              fullWidth
+            >
+              <MenuItem value="">Unassigned</MenuItem>
+              {branches.map((b) => (
+                <MenuItem key={b.id} value={b.id}>
+                  {b.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+          <Button
+            variant="contained"
+            startIcon={<PersonAddRoundedIcon />}
+            onClick={createAdmin}
+            disabled={creating}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            {creating ? "Creating…" : "Create admin"}
+          </Button>
+        </Stack>
+      </Card>
+
+      {/* Admins list */}
+      <Card sx={{ p: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Admins
+        </Typography>
+        <Divider sx={{ mb: 1 }} />
       <Stack divider={<Divider />}>
         {admins.map((a) => (
           <Stack
@@ -144,6 +250,7 @@ export default function AdminManagementPanel() {
       <Alert severity="info" sx={{ mt: 2 }}>
         Assign admins to branches and disable accounts as needed. Super admins can't be disabled.
       </Alert>
-    </Card>
+      </Card>
+    </Stack>
   );
 }

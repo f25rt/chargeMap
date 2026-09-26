@@ -1,6 +1,12 @@
 spring:
   application:
     name: chargemap-api
+  # Redis is OPTIONAL. It's only used for rate limiting; by default we exclude its
+  # auto-configuration so the app never tries to connect to Redis (works on hosts with no
+  # Redis, e.g. a free-tier deploy). To ENABLE Redis-backed rate limiting, set
+  # CHARGEMAP_REDIS_EXCLUDE to an empty string AND set chargemap.rate-limit.enabled=true.
+  autoconfigure:
+    exclude: ${CHARGEMAP_REDIS_EXCLUDE:org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration}
   data:
     mongodb:
       # Local default targets the single-node replica set from docker-compose (replicaSet=rs0),
@@ -45,6 +51,10 @@ chargemap:
   pagination:
     default-size: 20
     max-size: 100
+  # Rate limiting needs Redis; off by default. Enable only when Redis is available
+  # (also clear CHARGEMAP_REDIS_EXCLUDE so the Redis auto-config is active).
+  rate-limit:
+    enabled: ${CHARGEMAP_RATE_LIMIT_ENABLED:false}
   security:
     jwt:
       # Base64-encoded HMAC secret. Override via env in every real environment.

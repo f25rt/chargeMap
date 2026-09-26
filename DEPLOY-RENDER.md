@@ -10,8 +10,17 @@ You create two services:
 2. **chargemap-web** — a free **Static Site** (the Vite build) that rewrites `/api` to the
    backend so the app stays same-origin (no CORS setup)
 
-> `render.yaml` in the repo documents the exact settings; on free tier you mirror them
-> manually rather than using the Blueprint.
+> There is intentionally **no `render.yaml`** in the repo. A Blueprint file was removed
+> because (a) Blueprints may need a paid plan and (b) Render was mis-reading it. Create the
+> two services **manually** as described below.
+
+### If you already saw: `render.yaml:11 >>> services:` (Dockerfile parse error)
+
+That means your backend Web Service has its **Dockerfile Path set to `render.yaml`** (Render
+tried to parse the YAML as a Dockerfile — `services:` isn't a Docker instruction). **Fix:**
+open the service → **Settings** → set **Dockerfile Path = `Dockerfile`** → Save → Manual
+Deploy. (Deleting `render.yaml` from the repo alone won't fix a service that's already
+pointed at it — you must correct the path.)
 
 ---
 

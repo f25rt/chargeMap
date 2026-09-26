@@ -12,9 +12,22 @@ management:
       exposure:
         include: health
 
-# Tighten multipart to the app's 8 MB image limit (defense in depth alongside Nginx).
 spring:
   servlet:
     multipart:
+      # Tighten multipart to the app's 8 MB image limit (defense in depth alongside Nginx).
       max-file-size: 8MB
       max-request-size: 10MB
+  # Redis is OPTIONAL in production. On a free-tier host with no Redis, exclude the Redis
+  # auto-configuration so no StringRedisTemplate bean is created and rate limiting disables
+  # cleanly. If you DO have Redis, set CHARGEMAP_REDIS_ENABLED=true (see below) and remove
+  # this exclusion via SPRING_AUTOCONFIGURE_EXCLUDE="".
+  autoconfigure:
+    exclude: >-
+      org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,
+      org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+# Rate limiting off by default in prod unless Redis is wired.
+chargemap:
+  rate-limit:
+    enabled: false

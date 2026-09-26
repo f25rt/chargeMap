@@ -10,10 +10,14 @@
 
 services:
   # ---- Backend (Docker web service) ----
+  # NOTE: Render's Blueprint (this file) may require a paid account. On the FREE tier,
+  # create these two services MANUALLY in the dashboard instead — see DEPLOY-RENDER.md.
+  # This file documents the exact settings to mirror by hand. No Redis is used (rate
+  # limiting is optional and disabled without it).
   - type: web
     name: chargemap-api
     runtime: docker
-    plan: starter            # 'free' spins down when idle; 'starter' stays warm
+    plan: free               # spins down when idle (~15 min); cold start ~30-60s
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
@@ -39,23 +43,12 @@ services:
         sync: false
       - key: CHARGEMAP_SUPERADMIN_PASSWORD
         sync: false
-      # Redis connection, pulled from the managed instance below.
-      - key: REDIS_HOST
-        fromService:
-          type: keyvalue
-          name: chargemap-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: keyvalue
-          name: chargemap-redis
-          property: port
 
   # ---- Static frontend (Vite build) ----
   - type: web
     name: chargemap-web
     runtime: static
-    plan: starter
+    plan: free
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/dist
     autoDeploy: true
@@ -68,6 +61,7 @@ services:
         value: ""
     routes:
       # Proxy API + health to the backend service (keeps the app same-origin, no CORS).
+      # Update the destination host to your ACTUAL backend URL after it deploys.
       - type: rewrite
         source: /api/*
         destination: https://chargemap-api.onrender.com/api/*
@@ -79,12 +73,5 @@ services:
         source: /*
         destination: /index.html
 
-  # ---- Managed Redis (Render Key Value) ----
-  - type: keyvalue
-    name: chargemap-redis
-    plan: starter
-    ipAllowList: []          # empty = only accessible from Render services on this account
-
-# MongoDB is external (MongoDB Atlas). After the first deploy, set MONGODB_URI on the
-# chargemap-api service (Environment tab) to your Atlas SRV string with /chargemap, and
-# add Render's outbound IPs (or 0.0.0.0/0 for testing) to Atlas Network Access.
+# No Redis service: rate limiting is optional and disabled when Redis is absent (prod
+# profile excludes Redis auto-config). MongoDB is external (Atlas) — set MONGODB_URI.

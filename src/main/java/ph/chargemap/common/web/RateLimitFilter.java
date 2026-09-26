@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
@@ -23,23 +24,31 @@ import java.time.Duration;
  * all write requests (POST/PUT/DELETE) and the geo/search reads. Keyed by client IP +
  * authenticated user + minute window. Fails open if Redis is unavailable so a cache
  * outage never blocks legitimate traffic.
+ *
+ * <p>Redis is OPTIONAL: when no {@code StringRedisTemplate} bean is present (e.g. a
+ * free-tier deploy with no Redis), rate limiting is simply disabled — the app runs fine
+ * without it.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
-    private final StringRedisTemplate redisTemplate;
+    private final StringRedisTemplate redisTemplate; // may be null when Redis isn't configured
     private final ObjectMapper objectMapper;
     private final boolean enabled;
     private final int limit;
 
-    public RateLimitFilter(StringRedisTemplate redisTemplate, ObjectMapper objectMapper,
-                           ChargeMapProperties props) {
-        this.redisTemplate = redisTemplate;
+    public RateLimitFilter(ObjectProvider<StringRedisTemplate> redisTemplateProvider,
+                           ObjectMapper objectMapper, ChargeMapProperties props) {
+        this.redisTemplate = redisTemplateProvider.getIfAvailable();
         this.objectMapper = objectMapper;
-        this.enabled = props.getRateLimit().isEnabled();
+        // Only active when explicitly enabled AND a Redis template is available.
+        this.enabled = props.getRateLimit().isEnabled() && this.redisTemplate != null;
         this.limit = props.getRateLimit().getRequestsPerMinute();
+        if (props.getRateLimit().isEnabled() && this.redisTemplate == null) {
+            log.warn("Rate limiting requested but no Redis is configured — disabling it.");
+        }
     }
 
     @Override

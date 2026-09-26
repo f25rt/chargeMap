@@ -821,8 +821,9 @@ export default function ConsumerApp() {
 
       {/* Add-station FAB: rides just above the top edge of the nearby-charger sheet, so it
           moves with the sheet as it drags up/down and never overlaps the station detail
-          panel (which is on the right and stops above the sheet). Hidden while pin-placing. */}
-      {!pinMode && (
+          panel (which is on the right and stops above the sheet). Hidden while pin-placing.
+          Only shown to signed-in users. */}
+      {!pinMode && user && (
         <Fab
           color="primary"
           variant="extended"

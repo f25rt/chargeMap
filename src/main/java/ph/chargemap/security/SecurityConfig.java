@@ -49,12 +49,27 @@ public class SecurityConfig {
      * CORS for the local frontend dev server (Vite defaults to 5173). Kept permissive for
      * local development; tighten allowed origins for real deployments.
      */
+    // Comma-separated extra allowed origin patterns from env (e.g. your custom domain).
+    @org.springframework.beans.factory.annotation.Value("${CHARGEMAP_CORS_ORIGINS:}")
+    private String extraCorsOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
+        // Use origin PATTERNS so wildcards work together with allowCredentials(true).
+        java.util.List<String> patterns = new java.util.ArrayList<>(List.of(
                 "http://localhost:5173", "http://127.0.0.1:5173",
-                "http://localhost:3000", "http://127.0.0.1:3000"));
+                "http://localhost:3000", "http://127.0.0.1:3000",
+                // Render-hosted frontends (static site + previews).
+                "https://*.onrender.com"));
+        if (extraCorsOrigins != null && !extraCorsOrigins.isBlank()) {
+            for (String o : extraCorsOrigins.split(",")) {
+                if (!o.isBlank()) {
+                    patterns.add(o.trim());
+                }
+            }
+        }
+        config.setAllowedOriginPatterns(patterns);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

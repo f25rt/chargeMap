@@ -796,13 +796,25 @@ export default function ConsumerApp() {
         }}
       >
         <BottomNavigation
+          showLabels
           value={view}
           onChange={(_, v) => {
             setSearching(false);
             setSearchTerm("");
             setView(v as View);
           }}
-          sx={{ height: BOTTOM_NAV_HEIGHT, bgcolor: "transparent" }}
+          sx={{
+            height: BOTTOM_NAV_HEIGHT,
+            bgcolor: "transparent",
+            // Always show compact labels under each icon (not just the selected one).
+            "& .MuiBottomNavigationAction-label": {
+              fontSize: 11,
+              fontWeight: 600,
+              opacity: 1,
+              mt: 0.25,
+              "&.Mui-selected": { fontSize: 11 },
+            },
+          }}
         >
           <BottomNavigationAction label="Nearby" value="nearby" icon={<ExploreIcon />} />
           <BottomNavigationAction label="Cheapest" value="cheapest" icon={<SavingsIcon />} />

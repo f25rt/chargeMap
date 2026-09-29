@@ -211,6 +211,8 @@ export default function StationDetailSheet({
 
   const openGoogleMaps = () => {
     if (!station?.location) return;
+    // External directions are also a navigate action — signed-in only.
+    if (!user) return onRequireLogin();
     const { lat, lng } = station.location;
     // Exact coordinates as destination (encoded comma) so Google doesn't snap to a
     // nearby named place. Google provides real live-traffic, least-traffic routing.
@@ -223,6 +225,8 @@ export default function StationDetailSheet({
 
   const startNavigate = async () => {
     if (!station?.location) return;
+    // Navigation is a signed-in-only action; viewing the station is open to everyone.
+    if (!user) return onRequireLogin();
     setRouting(true);
     setRouteError(null);
     try {

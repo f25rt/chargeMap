@@ -13,6 +13,7 @@ import "./index.css";
 import { theme } from "./theme";
 import { AuthProvider } from "./auth/AuthContext";
 import App from "./App";
+import PwaUpdater from "./pwa/PwaUpdater";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <App />
       </AuthProvider>
+      <PwaUpdater />
     </ThemeProvider>
   </React.StrictMode>,
 );

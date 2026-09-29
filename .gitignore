@@ -2,6 +2,12 @@ target/
 *.class
 *.log
 
+# Node / frontend build artifacts (should never be tracked)
+node_modules/
+**/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
 # IDE
 .idea/
 *.iml
@@ -19,3 +25,6 @@ Thumbs.db
 *.local
 .env.production
 .env.*.local
+
+# Fetched OSM import payloads (transient working data; re-fetch with scripts/fetch-osm.ps1)
+data/osm-*.json

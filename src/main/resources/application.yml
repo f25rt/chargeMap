@@ -60,3 +60,26 @@ chargemap:
       # Base64-encoded HMAC secret. Override via env in every real environment.
       secret: ${JWT_SECRET:Y2hhbmdlLW1lLXRoaXMtaXMtYS1kZXYtb25seS1zZWNyZXQtMzIrYnl0ZXM=}
       expiry-minutes: ${JWT_EXPIRY_MINUTES:1440}
+  # OpenStreetMap importer (opt-in). When enabled, on startup the app fetches real
+  # amenity=charging_station data (ODbL, attribute OpenStreetMap contributors) within the
+  # bounding box and upserts it into the stations collection, then keeps running. Set
+  # CHARGEMAP_IMPORT_OSM=true once to seed, then unset it for normal runs.
+  #
+  # Bounding boxes (S,W,N,E in decimal degrees):
+  #   Philippines (default): 4.5, 116.0, 21.5, 127.0
+  #   Metro Cebu (focused):  10.20, 123.75, 10.45, 124.05
+  import:
+    osm:
+      enabled: ${CHARGEMAP_IMPORT_OSM:false}
+      # Optional: import from a pre-fetched Overpass JSON file instead of calling the API.
+      # Use this behind a TLS-inspecting proxy (e.g. Zscaler) that breaks the backend's
+      # direct HTTPS to Overpass. Fetch with scripts/fetch-osm.ps1, then set this path.
+      file: ${CHARGEMAP_IMPORT_OSM_FILE:}
+      # Overpass endpoint. overpass-api.de uses a CA the JDK trusts out of the box.
+      # Keep bounding boxes regional (not country-wide) or this endpoint may 504.
+      endpoint: ${CHARGEMAP_IMPORT_OSM_ENDPOINT:https://overpass-api.de/api/interpreter}
+      bbox:
+        south: ${CHARGEMAP_IMPORT_OSM_SOUTH:4.5}
+        west: ${CHARGEMAP_IMPORT_OSM_WEST:116.0}
+        north: ${CHARGEMAP_IMPORT_OSM_NORTH:21.5}
+        east: ${CHARGEMAP_IMPORT_OSM_EAST:127.0}

@@ -69,6 +69,11 @@ public class Station {
     private Confidence confidence;
     private Instant lastVerified;
 
+    // Stable external identifier for imported stations (e.g. "osm:node/123456").
+    // Null for user-submitted / operator stations. Used to dedup + update on re-import.
+    @Indexed(sparse = true)
+    private String sourceRef;
+
     // Admin moderation: disabled stations are hidden from consumer results (section 38).
     private boolean disabled;
 
@@ -266,6 +271,14 @@ public class Station {
 
     public void setLastVerified(Instant lastVerified) {
         this.lastVerified = lastVerified;
+    }
+
+    public String getSourceRef() {
+        return sourceRef;
+    }
+
+    public void setSourceRef(String sourceRef) {
+        this.sourceRef = sourceRef;
     }
 
     public Instant getCreatedAt() {

@@ -111,8 +111,10 @@ public class StationSeeder {
         s.setAvailableCount(available);
         s.setAvailabilitySummary(available > 0 ? AvailabilitySummary.AVAILABLE
                 : AvailabilitySummary.OCCUPIED);
-        // Vary freshness: some recent, some stale (older than default 30 min threshold)
-        s.setAvailabilityUpdatedAt(now.minus(rnd.nextInt(90), ChronoUnit.MINUTES));
+        // Keep availability FRESH (0–20 min ago) so it stays within the 30-min staleness
+        // threshold. Otherwise the mapper downgrades stale stations to UNKNOWN (yellow)
+        // even when a charger is available, which looks wrong on the map.
+        s.setAvailabilityUpdatedAt(now.minus(rnd.nextInt(20), ChronoUnit.MINUTES));
 
         s.setDataSource(DataSource.values()[rnd.nextInt(DataSource.values().length)]);
         s.setConfidence(Confidence.values()[rnd.nextInt(Confidence.values().length)]);

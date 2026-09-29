@@ -66,7 +66,11 @@ const VIEW_LABEL: Record<View, string> = {
 export default function ConsumerApp() {
   const { user } = useAuth();
   const [view, setView] = useState<View>("nearby");
+  // `stations` drives the bottom list and is view-specific (Nearby/Cheapest/Available/Saved).
   const [stations, setStations] = useState<StationSummary[]>([]);
+  // `mapStations` always holds the full nearby set so map markers never disappear when the
+  // user switches list views (Cheapest/Available/Saved return filtered subsets).
+  const [mapStations, setMapStations] = useState<StationSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<StationFilters>({});
   const [showFilters, setShowFilters] = useState(false);
@@ -115,6 +119,8 @@ export default function ConsumerApp() {
         switch (view) {
           case "nearby":
             data = await api.nearby(lat, lng, RADIUS_KM, filters);
+            // Nearby list IS the full set — reuse it for the map (one request).
+            setMapStations(data);
             break;
           case "cheapest":
             data = await api.cheapest(lat, lng, RADIUS_KM, filters);
@@ -127,8 +133,18 @@ export default function ConsumerApp() {
             break;
           default:
             data = await api.nearby(lat, lng, RADIUS_KM, filters);
+            setMapStations(data);
         }
         setStations(data);
+        // For filtered/subset views, keep the map showing the full nearby set so markers
+        // don't vanish when switching tabs. (Nearby already set mapStations above.)
+        if (view !== "nearby") {
+          try {
+            setMapStations(await api.nearby(lat, lng, RADIUS_KM, filters));
+          } catch {
+            // Leave the previous map markers in place if this supplemental fetch fails.
+          }
+        }
       } finally {
         if (!silent) setLoading(false);
       }
@@ -168,7 +184,10 @@ export default function ConsumerApp() {
     setLoading(true);
     setSearching(true);
     try {
-      setStations(await api.search(searchTerm.trim()));
+      const results = await api.search(searchTerm.trim());
+      setStations(results);
+      // While searching, the map reflects the search results too.
+      setMapStations(results);
     } finally {
       setLoading(false);
     }
@@ -458,7 +477,7 @@ export default function ConsumerApp() {
       <Box sx={{ position: "absolute", inset: 0 }}>
         <StationMap
           center={center}
-          stations={stations}
+          stations={mapStations}
           selectedId={selectedId}
           onSelect={selectStation}
           pinMode={pinMode}

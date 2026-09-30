@@ -47,8 +47,9 @@ import BottomSheet from "../components/BottomSheet";
 import AddStationDialog from "../components/AddStationDialog";
 import ProfileSheet from "../components/ProfileSheet";
 import { hud } from "../theme";
-import { Fab } from "@mui/material";
+import { Fab, Tooltip } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import PinDropRoundedIcon from "@mui/icons-material/PinDropRounded";
 
 // Cebu Business Park — default map center for the MVP launch area.
 const CEBU: [number, number] = [10.3181, 123.9068];
@@ -836,28 +837,41 @@ export default function ConsumerApp() {
           moves with the sheet as it drags up/down and never overlaps the station detail
           panel (which is on the right and stops above the sheet). Hidden while pin-placing.
           Only shown to signed-in users. */}
-      {!pinMode && user && (
-        <Fab
-          color="primary"
-          variant="extended"
-          onClick={() => {
-            setSelectedId(null); // close the station dialog if open
-            startAddStation();
-          }}
-          sx={{
-            position: "absolute",
-            // Right edge normally; shift left of the detail panel (400px + gutter) when it's
-            // open so the two never overlap.
-            right: selectedId ? { xs: 16, md: 428 } : 16,
-            // Sit ~16px above the sheet's top edge (sheet height = sheetFraction of shell).
-            bottom: `calc(${sheetFraction * 100}% + 16px)`,
-            zIndex: 1370,
-            transition: "bottom .2s ease, right .25s ease",
-          }}
+      {user && (
+        <Tooltip
+          title={pinMode ? "Tap the map to drop the station pin" : "Add a charging station"}
+          placement="left"
         >
-          <AddRoundedIcon sx={{ mr: 1 }} />
-          Add station
-        </Fab>
+          <Fab
+            color="primary"
+            size="small"
+            aria-label={pinMode ? "Placing station — tap the map" : "Add a charging station"}
+            onClick={() => {
+              if (pinMode) {
+                setPinMode(false); // toggle off placement mode
+                return;
+              }
+              setSelectedId(null); // close the station dialog if open
+              startAddStation();
+            }}
+            sx={{
+              position: "absolute",
+              // Right edge normally; shift left of the detail panel (400px + gutter) when it's
+              // open so the two never overlap. In pin mode the detail panel is closed.
+              right: selectedId && !pinMode ? { xs: 16, md: 428 } : 16,
+              // Sit ~16px above the sheet's top edge (sheet height = sheetFraction of shell).
+              bottom: `calc(${sheetFraction * 100}% + 16px)`,
+              zIndex: 1370,
+              transition: "bottom .2s ease, right .25s ease",
+              // Active placement state: pulse + brighter glow so it reads as "armed".
+              ...(pinMode && {
+                boxShadow: "0 0 0 4px rgba(0,255,157,.25), 0 0 20px rgba(0,255,157,.5)",
+              }),
+            }}
+          >
+            {pinMode ? <PinDropRoundedIcon /> : <AddRoundedIcon />}
+          </Fab>
+        </Tooltip>
       )}
 
       <StationDetailSheet

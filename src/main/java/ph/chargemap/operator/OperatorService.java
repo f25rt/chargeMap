@@ -91,7 +91,18 @@ public class OperatorService {
                     now));
         }
 
-        station.setCurrentPricing(new CurrentPricing(request.pricePerKwh(), model, now, null));
+        CurrentPricing pricing = new CurrentPricing(request.pricePerKwh(), model, now, null);
+        // Optional dynamic tariff (off-peak rate + peak window). Only set when all present
+        // and the window is valid; otherwise the station stays on a flat rate.
+        Integer ps = request.peakStartHour();
+        Integer pe = request.peakEndHour();
+        if (request.offPeakPricePerKwh() != null && ps != null && pe != null
+                && ps >= 0 && ps <= 23 && pe >= 0 && pe <= 23 && !ps.equals(pe)) {
+            pricing.setOffPeakPricePerKwh(request.offPeakPricePerKwh());
+            pricing.setPeakStartHour(ps);
+            pricing.setPeakEndHour(pe);
+        }
+        station.setCurrentPricing(pricing);
         station.setDataSource(DataSource.OPERATOR);
         station.setLastUpdated(now);
         station.setLastVerified(now);

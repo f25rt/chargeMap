@@ -39,7 +39,7 @@ public class DemoDataReseeder {
         }
         String[] collections = {
                 "stations", "prizes", "users", "station_submissions",
-                "points_ledger", "reports", "favorites"
+                "points_ledger", "reports", "favorites", "charging_sessions"
         };
         for (String c : collections) {
             if (mongoTemplate.collectionExists(c)) {

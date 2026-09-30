@@ -31,6 +31,11 @@ import type {
   StationReview,
   LikeStatus,
   LikeTrendPoint,
+  ChargingSession,
+  LogSessionRequest,
+  TelemetryRollup,
+  StationTelemetry,
+  GridTelemetry,
 } from "./types";
 
 const TOKEN_KEY = "chargemap.token";
@@ -151,11 +156,19 @@ export const api = {
       })
       .then((r) => r.data),
 
-  operatorUpdatePricing: (stationId: string, pricePerKwh: number, pricingModel = "PER_KWH") =>
+  operatorUpdatePricing: (
+    stationId: string,
+    pricePerKwh: number,
+    pricingModel = "PER_KWH",
+    tariff?: { offPeakPricePerKwh?: number; peakStartHour?: number; peakEndHour?: number },
+  ) =>
     http
       .put<StationDetail>(`/api/operator/stations/${stationId}/pricing`, {
         pricePerKwh,
         pricingModel,
+        offPeakPricePerKwh: tariff?.offPeakPricePerKwh,
+        peakStartHour: tariff?.peakStartHour,
+        peakEndHour: tariff?.peakEndHour,
       })
       .then((r) => r.data),
 
@@ -413,4 +426,18 @@ export const api = {
     http
       .get<LikeTrendPoint[]>("/api/moderation/metrics/branch-like-trend", { params: { days } })
       .then((r) => r.data),
+
+  // ----- Charging sessions + driver telemetry rollup -----
+  logSession: (req: LogSessionRequest) =>
+    http.post<ChargingSession>("/api/sessions", req).then((r) => r.data),
+
+  mySessions: () => http.get<ChargingSession[]>("/api/sessions").then((r) => r.data),
+
+  myTelemetry: () => http.get<TelemetryRollup>("/api/sessions/telemetry").then((r) => r.data),
+
+  // ----- Simulated station/grid telemetry (DEMO) -----
+  stationTelemetry: (stationId: string) =>
+    http.get<StationTelemetry>(`/api/stations/${stationId}/telemetry`).then((r) => r.data),
+
+  gridTelemetry: () => http.get<GridTelemetry>("/api/admin/telemetry/grid").then((r) => r.data),
 };

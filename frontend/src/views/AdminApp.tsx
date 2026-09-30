@@ -22,7 +22,7 @@ import WarningRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import { api } from "../api/client";
-import type { AdminStats, ReportFeedItem, StationDetail } from "../api/types";
+import type { AdminStats, GridTelemetry, ReportFeedItem, StationDetail } from "../api/types";
 import { hud, statusDot, statusLabel } from "../theme";
 import DashboardShell from "./DashboardShell";
 import UsersPanel from "./panels/UsersPanel";
@@ -228,6 +228,8 @@ function Overview() {
           ● SYNCED : SECURE
         </Typography>
       </Box>
+
+      <GridTelemetryCard />
 
       {stats && (
         <Box
@@ -439,6 +441,141 @@ function Overview() {
         }}
       />
     </Stack>
+  );
+}
+
+/**
+ * SIMULATED grid throughput + IoT hardware stream for the Telemetry Hub. There is no real
+ * charger-hardware feed (no OCPP/OCPI integration), so every value here is synthesized and
+ * clearly labeled DEMO. Polls the backend every 10s for fresh simulated values.
+ */
+function GridTelemetryCard() {
+  const [grid, setGrid] = useState<GridTelemetry | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchGrid = () =>
+      api
+        .gridTelemetry()
+        .then((g) => {
+          if (active) setGrid(g);
+        })
+        .catch(() => {});
+    fetchGrid();
+    const id = setInterval(fetchGrid, 10000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  const metric = (label: string, value: string, unit?: string, accent: string = hud.mint) => (
+    <Box sx={{ bgcolor: "rgba(0,0,0,.3)", p: 1.25, borderRadius: 1, border: `1px solid ${hud.border}` }}>
+      <Typography
+        sx={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: hud.textMuted,
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        sx={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 18, color: accent, mt: 0.25 }}
+      >
+        {value}
+        {unit && (
+          <Typography component="span" sx={{ fontSize: 10, color: hud.textMuted, ml: 0.4 }}>
+            {unit}
+          </Typography>
+        )}
+      </Typography>
+    </Box>
+  );
+
+  const levelColor = (lvl: string) =>
+    lvl === "ERROR" ? hud.neon : lvl === "WARN" ? hud.amber : hud.mint;
+
+  return (
+    <Card sx={{ p: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+        <Typography
+          sx={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: hud.textHigh,
+          }}
+        >
+          ▚ IoT Hardware Stream
+        </Typography>
+        <Chip
+          label="SIMULATED · DEMO"
+          size="small"
+          sx={{
+            height: 20,
+            bgcolor: "rgba(0,184,255,.1)",
+            color: hud.cyan,
+            border: `1px solid ${hud.cyan}55`,
+            "& .MuiChip-label": { px: 0.75, fontSize: 9, letterSpacing: "0.08em" },
+          }}
+        />
+      </Stack>
+      <Typography variant="caption" sx={{ color: hud.textMuted, display: "block", mb: 1.5 }}>
+        No live charger-hardware feed exists (requires OCPP/OCPI operator integration). These
+        readings are synthesized for demonstration only.
+      </Typography>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(5, 1fr)" },
+          gap: 1.25,
+          mb: 2,
+        }}
+      >
+        {metric("Throughput", grid ? String(grid.throughputMw) : "—", "MW", hud.mint)}
+        {metric("Capacity", grid ? String(grid.capacityPercent) : "—", "%", hud.cyan)}
+        {metric("Grid Freq", grid ? String(grid.gridFrequencyHz) : "—", "Hz", hud.mint)}
+        {metric("Thermistor", grid ? String(grid.thermistorC) : "—", "°C", hud.amber)}
+        {metric("RFID Latency", grid ? String(grid.rfidLatencyMs) : "—", "ms", hud.cyan)}
+      </Box>
+
+      {/* IoT log stream */}
+      <Box
+        sx={{
+          bgcolor: "#05070b",
+          border: `1px solid ${hud.border}`,
+          borderRadius: 1,
+          p: 1.25,
+          maxHeight: 200,
+          overflowY: "auto",
+          fontFamily: "'JetBrains Mono', monospace",
+        }}
+      >
+        {(grid?.iotStream ?? []).map((line, i) => (
+          <Box key={i} sx={{ display: "flex", gap: 1, fontSize: 11, py: 0.25 }}>
+            <Box component="span" sx={{ color: hud.textMuted, flexShrink: 0 }}>
+              [{new Date(line.timestamp).toLocaleTimeString("en-GB")}]
+            </Box>
+            <Box component="span" sx={{ color: hud.cyan, flexShrink: 0 }}>
+              {line.source}
+            </Box>
+            <Box component="span" sx={{ color: levelColor(line.level) }}>
+              {line.message}
+            </Box>
+          </Box>
+        ))}
+        {!grid && (
+          <Typography sx={{ fontSize: 11, color: hud.textMuted }}>Connecting…</Typography>
+        )}
+      </Box>
+    </Card>
   );
 }
 

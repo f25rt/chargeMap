@@ -103,8 +103,17 @@ public class StationSeeder {
 
         // Price varies ₱8–₱24/kWh
         BigDecimal price = BigDecimal.valueOf(8 + rnd.nextInt(17)).setScale(2);
-        s.setCurrentPricing(new CurrentPricing(price, PricingModel.PER_KWH,
-                now.minus(30, ChronoUnit.DAYS), null));
+        CurrentPricing pricing = new CurrentPricing(price, PricingModel.PER_KWH,
+                now.minus(30, ChronoUnit.DAYS), null);
+        // Give some stations a dynamic peak/off-peak tariff (off-peak ~20% cheaper,
+        // peak window 18:00–22:00) to demonstrate time-of-use pricing.
+        if (rnd.nextBoolean()) {
+            pricing.setOffPeakPricePerKwh(
+                    price.multiply(BigDecimal.valueOf(0.8)).setScale(2, java.math.RoundingMode.HALF_UP));
+            pricing.setPeakStartHour(18);
+            pricing.setPeakEndHour(22);
+        }
+        s.setCurrentPricing(pricing);
 
         int available = (int) chargers.stream().filter(c -> c.getStatus() == ChargerStatus.AVAILABLE).count();
         s.setTotalChargers(chargers.size());

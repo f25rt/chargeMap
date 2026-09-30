@@ -43,6 +43,10 @@ export interface Pricing {
   pricingModel: string;
   effectiveFrom: string | null;
   effectiveTo: string | null;
+  // Optional dynamic tariff (time-of-use). Null when the station is flat-rate.
+  offPeakPricePerKwh: number | null;
+  peakStartHour: number | null;
+  peakEndHour: number | null;
 }
 
 export interface StationDetail extends StationSummary {
@@ -372,4 +376,78 @@ export interface LikeTrendPoint {
   likes: number;
   unlikes: number;
   net: number;
+}
+
+// ----- Charging sessions + driver telemetry rollup -----
+
+export interface ChargingSession {
+  id: string;
+  stationId: string | null;
+  stationName: string | null;
+  energyKwh: number;
+  durationMinutes: number | null;
+  peakKw: number | null;
+  pricePerKwh: number | null;
+  cost: number | null;
+  co2SavedKg: number;
+  startedAt: string | null;
+}
+
+export interface LogSessionRequest {
+  stationId?: string;
+  stationName?: string;
+  energyKwh: number;
+  durationMinutes?: number | null;
+  peakKw?: number | null;
+  pricePerKwh?: number | null;
+  startedAt?: string;
+}
+
+export interface TelemetryRollup {
+  energyLoggedKwh: number;
+  co2SavedKg: number;
+  sessionCount: number;
+  totalSpent: number;
+  avgPricePerKwh: number | null;
+  trustScorePercent: number;
+  trustTier: string;
+}
+
+// ----- Simulated station/grid hardware telemetry (DEMO — never real hardware) -----
+
+export interface BayTelemetry {
+  bayNumber: number;
+  connectorType: string;
+  powerKw: number;
+  state: "AVAILABLE" | "DISPENSING" | "HOLD" | "CALIBRATING";
+  socPercent: number | null;
+  deliveringKw: number | null;
+  etaMinutes: number | null;
+}
+
+export interface StationTelemetry {
+  simulated: boolean;
+  stationId: string;
+  bays: BayTelemetry[];
+  totalDeliveringKw: number;
+  baysDispensing: number;
+  asOf: string;
+}
+
+export interface IotLog {
+  timestamp: string;
+  source: string;
+  level: "INFO" | "WARN" | "ERROR";
+  message: string;
+}
+
+export interface GridTelemetry {
+  simulated: boolean;
+  throughputMw: number;
+  capacityPercent: number;
+  gridFrequencyHz: number;
+  thermistorC: number;
+  rfidLatencyMs: number;
+  iotStream: IotLog[];
+  asOf: string;
 }

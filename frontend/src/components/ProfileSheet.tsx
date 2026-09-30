@@ -25,20 +25,16 @@ import { hud } from "../theme";
 import VehiclePanel from "./VehiclePanel";
 import ActivitiesPanel from "./ActivitiesPanel";
 import { api } from "../api/client";
-import type { PointsLedgerEntry, Prize } from "../api/types";
+import type { ChargingSession, PointsLedgerEntry, Prize, TelemetryRollup } from "../api/types";
 import { useAuth } from "../auth/AuthContext";
+import { TextField } from "@mui/material";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-const TASK_LABEL: Record<string, string> = {
-  STATION_ADD: "Added a station",
-  STATION_UPDATE: "Updated a station",
-  REPORT: "Reported status",
-  ADMIN_ADJUST: "Adjustment",
-};
+
 
 /** Small uppercase telemetry label. */
 function MicroLabel({ children }: { children: React.ReactNode }) {
@@ -63,11 +59,13 @@ function TelemetryStat({
   label,
   value,
   unit,
+  sub,
   accent = hud.textHigh,
 }: {
   label: string;
   value: string;
   unit?: string;
+  sub?: string;
   accent?: string;
 }) {
   return (
@@ -96,7 +94,218 @@ function TelemetryStat({
           </Typography>
         )}
       </Typography>
+      {sub && (
+        <Typography sx={{ fontSize: 9, color: hud.textMuted, mt: 0.25 }}>{sub}</Typography>
+      )}
     </Box>
+  );
+}
+
+const TASK_LABEL_MAP: Record<string, string> = {
+  STATION_ADD: "Added a station",
+  STATION_UPDATE: "Updated a station",
+  REPORT: "Reported status",
+  ADMIN_ADJUST: "Adjustment",
+};
+
+/** Session History tab: log a charging session + view past sessions and points ledger. */
+function SessionsTab({
+  sessions,
+  ledger,
+  onLogged,
+}: {
+  sessions: ChargingSession[];
+  ledger: PointsLedgerEntry[];
+  onLogged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [station, setStation] = useState("");
+  const [energy, setEnergy] = useState("");
+  const [duration, setDuration] = useState("");
+  const [peak, setPeak] = useState("");
+  const [price, setPrice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    const kwh = Number(energy);
+    if (!kwh || kwh <= 0) {
+      setErr("Enter the energy delivered (kWh).");
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.logSession({
+        stationName: station.trim() || undefined,
+        energyKwh: kwh,
+        durationMinutes: duration ? Number(duration) : undefined,
+        peakKw: peak ? Number(peak) : undefined,
+        pricePerKwh: price ? Number(price) : undefined,
+      });
+      setStation("");
+      setEnergy("");
+      setDuration("");
+      setPeak("");
+      setPrice("");
+      setOpen(false);
+      onLogged();
+    } catch {
+      setErr("Could not log the session. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Stack spacing={1.5}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <MicroLabel>Session History</MicroLabel>
+        <Button
+          size="small"
+          variant={open ? "text" : "outlined"}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? "Cancel" : "+ Log Session"}
+        </Button>
+      </Stack>
+
+      {open && (
+        <Box
+          sx={{
+            p: 1.75,
+            borderRadius: 1,
+            bgcolor: hud.surface2,
+            border: `1px solid ${hud.borderMint}`,
+          }}
+        >
+          {err && (
+            <Typography sx={{ color: hud.neon, fontSize: 12, mb: 1 }}>{err}</Typography>
+          )}
+          <Stack spacing={1.25}>
+            <TextField
+              size="small"
+              label="Station (optional)"
+              value={station}
+              onChange={(e) => setStation(e.target.value)}
+              fullWidth
+            />
+            <Stack direction="row" spacing={1}>
+              <TextField
+                size="small"
+                type="number"
+                label="Energy (kWh) *"
+                value={energy}
+                onChange={(e) => setEnergy(e.target.value)}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Duration (min)"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                sx={{ flex: 1 }}
+              />
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <TextField
+                size="small"
+                type="number"
+                label="Peak (kW)"
+                value={peak}
+                onChange={(e) => setPeak(e.target.value)}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Price (₱/kWh)"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                sx={{ flex: 1 }}
+              />
+            </Stack>
+            <Button variant="contained" onClick={submit} disabled={busy}>
+              {busy ? "Logging…" : "Log Session"}
+            </Button>
+          </Stack>
+        </Box>
+      )}
+
+      {sessions.length === 0 ? (
+        <Typography color="text.secondary" py={1} textAlign="center" sx={{ fontSize: 13 }}>
+          No sessions logged yet. Log your first charge to track energy &amp; CO2.
+        </Typography>
+      ) : (
+        <Stack spacing={1}>
+          {sessions.map((s) => (
+            <Box
+              key={s.id}
+              sx={{
+                p: 1.25,
+                borderRadius: 1,
+                bgcolor: hud.surface2,
+                border: `1px solid ${hud.border}`,
+              }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" fontWeight={600} noWrap sx={{ color: hud.textHigh }}>
+                  {s.stationName ?? "Session"}
+                </Typography>
+                <Typography
+                  sx={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: hud.mint, fontSize: 13 }}
+                >
+                  {s.energyKwh} kWh
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{ mt: 0.5, fontFamily: "'JetBrains Mono', monospace", color: hud.textMuted, fontSize: 11 }}
+                flexWrap="wrap"
+                useFlexGap
+              >
+                {s.cost != null && <span>₱{s.cost}</span>}
+                {s.durationMinutes != null && <span>• {s.durationMinutes} min</span>}
+                {s.peakKw != null && <span>• {s.peakKw} kW peak</span>}
+                <span>• {s.co2SavedKg} kg CO2 saved</span>
+                {s.startedAt && <span>• {new Date(s.startedAt).toLocaleDateString()}</span>}
+              </Stack>
+            </Box>
+          ))}
+        </Stack>
+      )}
+
+      {ledger.length > 0 && (
+        <>
+          <MicroLabel>Points Ledger</MicroLabel>
+          <Stack divider={<Divider />}>
+            {ledger.map((e, i) => (
+              <Stack
+                key={i}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ py: 0.75 }}
+              >
+                <Typography variant="caption" sx={{ color: hud.textMuted }}>
+                  {TASK_LABEL_MAP[e.taskType] ?? e.taskType}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  color={e.points >= 0 ? "success.main" : "error.main"}
+                >
+                  {e.points >= 0 ? "+" : ""}
+                  {e.points}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </>
+      )}
+    </Stack>
   );
 }
 
@@ -105,22 +314,30 @@ export default function ProfileSheet({ open, onClose }: Props) {
   const [tab, setTab] = useState(0);
   const [ledger, setLedger] = useState<PointsLedgerEntry[]>([]);
   const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [sessions, setSessions] = useState<ChargingSession[]>([]);
+  const [rollup, setRollup] = useState<TelemetryRollup | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const reload = () => {
+    setLoading(true);
+    Promise.all([refresh(), api.myPoints(), api.prizes(), api.mySessions(), api.myTelemetry()])
+      .then(([, l, p, s, t]) => {
+        setLedger(l);
+        setPrizes(p);
+        setSessions(s);
+        setRollup(t);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    Promise.all([refresh(), api.myPoints(), api.prizes()])
-      .then(([, l, p]) => {
-        setLedger(l);
-        setPrizes(p);
-      })
-      .finally(() => setLoading(false));
+    reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const balance = user?.pointsBalance ?? 0;
-  const lifetime = user?.lifetimePoints ?? 0;
   const initial = user?.name?.charAt(0).toUpperCase() ?? "?";
 
   // "Next tier" = cheapest prize the user can't yet afford (real data-driven target).
@@ -400,15 +617,25 @@ export default function ProfileSheet({ open, onClose }: Props) {
               gap: 1.25,
             }}
           >
-            <TelemetryStat label="Lifetime Points" value={String(lifetime)} unit="pts" accent={hud.textHigh} />
             <TelemetryStat
-              label="Contributions"
-              value={String((user?.stationsAdded ?? 0) + (user?.updatesMade ?? 0))}
-              unit="logs"
+              label="Energy Logged"
+              value={rollup ? String(rollup.energyLoggedKwh) : "—"}
+              unit="kWh"
               accent={hud.cyan}
             />
+            <TelemetryStat
+              label="CO2 Offset"
+              value={rollup ? String(rollup.co2SavedKg) : "—"}
+              unit="kg saved"
+              accent={hud.mint}
+            />
             <Box sx={{ gridColumn: { xs: "span 2", sm: "span 1" } }}>
-              <TelemetryStat label="Tier" value={user?.level ?? "—"} accent={hud.mint} />
+              <TelemetryStat
+                label="Trust Score"
+                value={rollup ? `${rollup.trustScorePercent}%` : "—"}
+                sub={rollup ? rollup.trustTier : undefined}
+                accent={hud.mint}
+              />
             </Box>
           </Box>
         </Box>
@@ -426,9 +653,9 @@ export default function ProfileSheet({ open, onClose }: Props) {
           }}
         >
           <Tab label="Rewards" />
-          <Tab label="History" />
-          <Tab label="Vehicle" />
-          <Tab label="Activities" />
+          <Tab label="Sessions" />
+          <Tab label="My EV" />
+          <Tab label="Activity" />
         </Tabs>
 
         <Box sx={{ pt: 2 }}>
@@ -583,40 +810,7 @@ export default function ProfileSheet({ open, onClose }: Props) {
               )}
             </Stack>
           ) : tab === 1 ? (
-            <Stack divider={<Divider />}>
-              {ledger.length === 0 ? (
-                <Typography color="text.secondary" py={2} textAlign="center">
-                  No activity yet — add your first station to earn points.
-                </Typography>
-              ) : (
-                ledger.map((e, i) => (
-                  <Stack
-                    key={i}
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ py: 1 }}
-                  >
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        {TASK_LABEL[e.taskType] ?? e.taskType}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {e.reason ?? new Date(e.createdAt).toLocaleString()}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="body2"
-                      fontWeight={700}
-                      color={e.points >= 0 ? "success.main" : "error.main"}
-                    >
-                      {e.points >= 0 ? "+" : ""}
-                      {e.points}
-                    </Typography>
-                  </Stack>
-                ))
-              )}
-            </Stack>
+            <SessionsTab sessions={sessions} ledger={ledger} onLogged={reload} />
           ) : tab === 2 ? (
             <VehiclePanel />
           ) : (

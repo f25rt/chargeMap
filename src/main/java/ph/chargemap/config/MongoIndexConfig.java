@@ -54,6 +54,14 @@ public class MongoIndexConfig {
         ops.ensureIndex(new Index().on("chargers.chargerType", Sort.Direction.ASC).named("charger_chargerType"));
         ops.ensureIndex(new Index().on("chargers.powerKw", Sort.Direction.ASC).named("charger_powerKw"));
         ops.ensureIndex(new Index().on("currentPricing.pricePerKwh", Sort.Direction.ASC).named("currentPricing_price"));
-        log.info("Ensured ChargeMap geo, text, and filter indexes on stations collection");
+
+        // Charging sessions: history lookups are per-user, newest first.
+        mongoTemplate.indexOps(ph.chargemap.session.ChargingSession.class)
+                .ensureIndex(new Index()
+                        .on("userId", Sort.Direction.ASC)
+                        .on("startedAt", Sort.Direction.DESC)
+                        .named("session_user_started"));
+
+        log.info("Ensured ChargeMap geo, text, filter, and session indexes");
     }
 }

@@ -15,6 +15,12 @@ public class CurrentPricing {
     private Instant effectiveFrom;
     private Instant effectiveTo;
 
+    // Optional dynamic tariff: a cheaper off-peak rate applies outside the peak window.
+    // When offPeakPricePerKwh is null there is no time-of-use pricing (flat rate only).
+    private BigDecimal offPeakPricePerKwh;
+    private Integer peakStartHour; // 0–23, local time
+    private Integer peakEndHour;   // 0–23, local time (exclusive)
+
     public CurrentPricing() {
     }
 
@@ -56,5 +62,34 @@ public class CurrentPricing {
 
     public void setEffectiveTo(Instant effectiveTo) {
         this.effectiveTo = effectiveTo;
+    }
+
+    public BigDecimal getOffPeakPricePerKwh() {
+        return offPeakPricePerKwh;
+    }
+
+    public void setOffPeakPricePerKwh(BigDecimal offPeakPricePerKwh) {
+        this.offPeakPricePerKwh = offPeakPricePerKwh;
+    }
+
+    public Integer getPeakStartHour() {
+        return peakStartHour;
+    }
+
+    public void setPeakStartHour(Integer peakStartHour) {
+        this.peakStartHour = peakStartHour;
+    }
+
+    public Integer getPeakEndHour() {
+        return peakEndHour;
+    }
+
+    public void setPeakEndHour(Integer peakEndHour) {
+        this.peakEndHour = peakEndHour;
+    }
+
+    /** True when a distinct off-peak rate + peak window are configured. */
+    public boolean hasDynamicTariff() {
+        return offPeakPricePerKwh != null && peakStartHour != null && peakEndHour != null;
     }
 }

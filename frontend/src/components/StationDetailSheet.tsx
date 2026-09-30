@@ -26,7 +26,7 @@ import ThumbUpRoundedIcon from "@mui/icons-material/ThumbUpRounded";
 import ThumbUpOffAltRoundedIcon from "@mui/icons-material/ThumbUpOffAltRounded";
 import PlaceRoundedIcon from "@mui/icons-material/PlaceRounded";
 import { api } from "../api/client";
-import type { ChargerStatus, StationDetail } from "../api/types";
+import type { ChargerStatus, StationDetail, StationTelemetry } from "../api/types";
 import StationReviews from "./StationReviews";
 import { hud, statusDot, statusLabel } from "../theme";
 import { useAuth } from "../auth/AuthContext";
@@ -158,6 +158,8 @@ export default function StationDetailSheet({
   const [likeCount, setLikeCount] = useState(0);
   const [likedByMe, setLikedByMe] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
+  // SIMULATED live bay telemetry (no real hardware feed — see backend SimTelemetryService).
+  const [telemetry, setTelemetry] = useState<StationTelemetry | null>(null);
 
   useEffect(() => {
     setMessage(null);
@@ -179,6 +181,26 @@ export default function StationDetailSheet({
         })
         .catch(() => {});
     }
+  }, [stationId]);
+
+  // Poll SIMULATED live bay telemetry every 15s while the sheet is open.
+  useEffect(() => {
+    setTelemetry(null);
+    if (!stationId) return;
+    let active = true;
+    const fetchTelem = () =>
+      api
+        .stationTelemetry(stationId)
+        .then((t) => {
+          if (active) setTelemetry(t);
+        })
+        .catch(() => {});
+    fetchTelem();
+    const id = setInterval(fetchTelem, 15000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
   }, [stationId]);
 
   const toggleLike = async () => {
@@ -492,6 +514,79 @@ export default function StationDetailSheet({
               />
             </Box>
 
+            {/* Dynamic tariff bands (only when the station has time-of-use pricing) */}
+            {station.currentPricing?.offPeakPricePerKwh != null &&
+              station.currentPricing.peakStartHour != null &&
+              station.currentPricing.peakEndHour != null && (
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    p: 1.25,
+                    borderRadius: 1,
+                    bgcolor: hud.surface2,
+                    border: `1px solid ${hud.border}`,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      color: hud.textMuted,
+                      mb: 0.75,
+                    }}
+                  >
+                    DYNAMIC TARIFF
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        p: 1,
+                        borderRadius: 0.5,
+                        bgcolor: "rgba(255,184,0,.10)",
+                        border: `1px solid rgba(255,184,0,.3)`,
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 9, color: hud.amber, letterSpacing: "0.08em" }}>
+                        PEAK {String(station.currentPricing.peakStartHour).padStart(2, "0")}:00–
+                        {String(station.currentPricing.peakEndHour).padStart(2, "0")}:00
+                      </Typography>
+                      <Typography
+                        sx={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: hud.amber }}
+                      >
+                        ₱{station.currentPricing.pricePerKwh}
+                        <Typography component="span" sx={{ fontSize: 10, ml: 0.4, color: hud.textMuted }}>
+                          /kWh
+                        </Typography>
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        p: 1,
+                        borderRadius: 0.5,
+                        bgcolor: "rgba(0,255,157,.08)",
+                        border: `1px solid rgba(0,255,157,.3)`,
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 9, color: hud.mint, letterSpacing: "0.08em" }}>
+                        OFF-PEAK (ALL OTHER HOURS)
+                      </Typography>
+                      <Typography
+                        sx={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: hud.mint }}
+                      >
+                        ₱{station.currentPricing.offPeakPricePerKwh}
+                        <Typography component="span" sx={{ fontSize: 10, ml: 0.4, color: hud.textMuted }}>
+                          /kWh
+                        </Typography>
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              )}
+
             {/* Connector stalls */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2.5 }}>
               <Typography
@@ -505,10 +600,34 @@ export default function StationDetailSheet({
               >
                 CONNECTOR STALLS ({station.chargers.length} BAYS)
               </Typography>
+              {telemetry && (
+                <Tooltip title="Simulated live data — ChargeMap has no direct charger-hardware feed">
+                  <Typography
+                    sx={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      color: hud.cyan,
+                      border: `1px solid ${hud.cyan}55`,
+                      borderRadius: 0.5,
+                      px: 0.6,
+                      py: 0.2,
+                    }}
+                  >
+                    ◉ LIVE (SIMULATED)
+                  </Typography>
+                </Tooltip>
+              )}
             </Stack>
             <Stack spacing={1} sx={{ mt: 1 }}>
               {station.chargers.map((c, i) => {
                 const cDot = statusDot(c.status);
+                // Simulated live state for this bay (bays are 1-indexed by position).
+                const bay = telemetry?.bays.find((b) => b.bayNumber === i + 1);
+                const dispensing = bay?.state === "DISPENSING";
+                const liveColor = dispensing ? hud.amber : bay?.state === "CALIBRATING" ? hud.neon : cDot;
+                const liveLabel = bay ? bay.state : statusLabel(c.status).toUpperCase();
                 return (
                   <Box
                     key={c.chargerId}
@@ -553,19 +672,33 @@ export default function StationDetailSheet({
                       >
                         {c.chargerType.replace("_", " ")} • Bay {String(i + 1).padStart(2, "0")}
                       </Typography>
+                      {/* Simulated live dispensing readout */}
+                      {dispensing && bay && (
+                        <Typography
+                          sx={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 10.5,
+                            color: hud.amber,
+                            mt: 0.25,
+                          }}
+                        >
+                          {bay.socPercent}% SoC • {bay.deliveringKw} kW
+                          {bay.etaMinutes != null ? ` • ~${bay.etaMinutes}m left` : ""}
+                        </Typography>
+                      )}
                     </Box>
                     <Stack direction="row" spacing={0.6} alignItems="center" sx={{ flexShrink: 0 }}>
-                      <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: cDot }} />
+                      <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: liveColor }} />
                       <Typography
                         sx={{
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: 11,
                           fontWeight: 700,
-                          color: cDot,
+                          color: liveColor,
                           textTransform: "uppercase",
                         }}
                       >
-                        {statusLabel(c.status)}
+                        {liveLabel}
                       </Typography>
                     </Stack>
                   </Box>

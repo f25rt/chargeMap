@@ -149,7 +149,7 @@ export default function AddStationDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box sx={{ px: 3, pt: 2.5, pb: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="h6">Add a charging station</Typography>
-        <IconButton onClick={onClose} size="small" sx={{ bgcolor: "#f3f4f6" }}>
+        <IconButton onClick={onClose} size="small" sx={{ bgcolor: "action.hover" }}>
           <CloseRoundedIcon fontSize="small" />
         </IconButton>
       </Box>
@@ -217,7 +217,7 @@ export default function AddStationDialog({
           <Stack direction="row" spacing={1}>
             <TextField label="Latitude" value={lat} onChange={(e) => setLat(e.target.value)} fullWidth />
             <TextField label="Longitude" value={lng} onChange={(e) => setLng(e.target.value)} fullWidth />
-            <IconButton onClick={useMyLocation} title="Use my location" sx={{ bgcolor: "#f3f4f6" }}>
+            <IconButton onClick={useMyLocation} title="Use my location" sx={{ bgcolor: "action.hover" }}>
               <MyLocationRoundedIcon />
             </IconButton>
           </Stack>

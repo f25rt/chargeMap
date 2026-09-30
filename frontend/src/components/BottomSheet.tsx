@@ -79,9 +79,10 @@ export default function BottomSheet({
         right: 0,
         bottom: 0,
         height: `calc(${frac * 100}% )`,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        boxShadow: "0 -10px 40px rgba(20,45,30,.16)",
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        borderTop: "1px solid rgba(0,255,157,.25)",
+        boxShadow: "0 0 32px rgba(0,255,157,.08)",
         transition: drag.current ? "none" : "height .32s cubic-bezier(.32,.72,0,1)",
         display: "flex",
         flexDirection: "column",
@@ -103,7 +104,7 @@ export default function BottomSheet({
           flexShrink: 0,
         }}
       >
-        <Box sx={{ width: 40, height: 5, borderRadius: 3, bgcolor: "#c7ccd1" }} />
+        <Box sx={{ width: 40, height: 5, borderRadius: 3, bgcolor: "#1e293b" }} />
       </Box>
 
       <Box

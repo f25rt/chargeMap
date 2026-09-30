@@ -25,8 +25,8 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         orientation: "portrait",
-        background_color: "#f3f6f1",
-        theme_color: "#1f9d57",
+        background_color: "#040608",
+        theme_color: "#040608",
         lang: "en",
         categories: ["travel", "navigation", "utilities"],
         icons: [

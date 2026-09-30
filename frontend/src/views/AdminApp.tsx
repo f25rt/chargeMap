@@ -23,7 +23,7 @@ import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import { api } from "../api/client";
 import type { AdminStats, ReportFeedItem, StationDetail } from "../api/types";
-import { statusDot, statusLabel } from "../theme";
+import { hud, statusDot, statusLabel } from "../theme";
 import DashboardShell from "./DashboardShell";
 import UsersPanel from "./panels/UsersPanel";
 import PricingTrendsPanel from "./panels/PricingTrendsPanel";
@@ -41,30 +41,76 @@ import { useAuth } from "../auth/AuthContext";
 
 const CEBU: [number, number] = [10.3181, 123.9068];
 
-function StatCard({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  accent = hud.mint,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  accent?: string;
+}) {
   return (
-    <Card sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5 }}>
+    <Card sx={{ p: 2, position: "relative", overflow: "hidden" }}>
+      {/* Corner reticle accent */}
       <Box
         sx={{
-          width: 44,
-          height: 44,
-          borderRadius: "50%",
-          bgcolor: "rgba(31,157,87,.12)",
-          color: "primary.main",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
+          position: "absolute",
+          top: 0,
+          right: 0,
+          width: 10,
+          height: 10,
+          borderTop: `2px solid ${accent}`,
+          borderRight: `2px solid ${accent}`,
+          opacity: 0.5,
         }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h5">{value}</Typography>
-        <Typography variant="caption" color="text.secondary">
-          {label}
-        </Typography>
-      </Box>
+      />
+      <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: 1,
+            bgcolor: `${accent}1f`,
+            color: accent,
+            border: `1px solid ${accent}44`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            sx={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 700,
+              fontSize: 24,
+              lineHeight: 1,
+              color: hud.textHigh,
+            }}
+          >
+            {value}
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: hud.textMuted,
+              mt: 0.5,
+            }}
+          >
+            {label}
+          </Typography>
+        </Box>
+      </Stack>
     </Card>
   );
 }
@@ -129,6 +175,60 @@ function Overview() {
 
   return (
     <Stack spacing={3}>
+      {/* Top telemetry status strip */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          flexWrap: "wrap",
+          px: 2,
+          py: 1,
+          borderRadius: 1,
+          bgcolor: hud.surface1,
+          border: `1px solid ${hud.border}`,
+          fontFamily: "'JetBrains Mono', monospace",
+        }}
+      >
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              bgcolor: hud.mint,
+              boxShadow: "0 0 8px rgba(0,255,157,.7)",
+            }}
+          />
+          <Typography sx={{ fontFamily: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: hud.mint }}>
+            GRID OPERATIONAL
+          </Typography>
+        </Stack>
+        {stats && (
+          <>
+            <Typography sx={{ fontFamily: "inherit", fontSize: 11, color: hud.textMuted }}>
+              STATIONS <Box component="span" sx={{ color: hud.textHigh, fontWeight: 700 }}>{stats.totalStations}</Box>
+            </Typography>
+            <Typography sx={{ fontFamily: "inherit", fontSize: 11, color: hud.textMuted }}>
+              LIVE BAYS{" "}
+              <Box component="span" sx={{ color: hud.textHigh, fontWeight: 700 }}>
+                {stats.availableChargers}/{stats.totalChargers}
+              </Box>
+            </Typography>
+            <Typography sx={{ fontFamily: "inherit", fontSize: 11, color: hud.textMuted }}>
+              PENDING{" "}
+              <Box component="span" sx={{ color: stats.totalReports > 0 ? hud.amber : hud.textHigh, fontWeight: 700 }}>
+                {stats.totalReports}
+              </Box>
+            </Typography>
+          </>
+        )}
+        <Box sx={{ flex: 1 }} />
+        <Typography sx={{ fontFamily: "inherit", fontSize: 10, letterSpacing: "0.1em", color: hud.textMuted }}>
+          ● SYNCED : SECURE
+        </Typography>
+      </Box>
+
       {stats && (
         <Box
           sx={{
@@ -137,12 +237,12 @@ function Overview() {
             gap: 2,
           }}
         >
-          <StatCard icon={<EvStationRoundedIcon />} label="Stations" value={stats.totalStations} />
-          <StatCard icon={<PowerRoundedIcon />} label="Chargers" value={stats.totalChargers} />
-          <StatCard icon={<BoltRoundedIcon />} label="Available" value={stats.availableChargers} />
-          <StatCard icon={<PeopleRoundedIcon />} label="Users" value={stats.totalUsers} />
-          <StatCard icon={<FlagRoundedIcon />} label="Reports" value={stats.totalReports} />
-          <StatCard icon={<WarningRoundedIcon />} label="Stale data" value={stats.staleStations} />
+          <StatCard icon={<EvStationRoundedIcon />} label="Stations" value={stats.totalStations} accent={hud.mint} />
+          <StatCard icon={<PowerRoundedIcon />} label="Chargers" value={stats.totalChargers} accent={hud.cyan} />
+          <StatCard icon={<BoltRoundedIcon />} label="Available" value={stats.availableChargers} accent={hud.mint} />
+          <StatCard icon={<PeopleRoundedIcon />} label="Users" value={stats.totalUsers} accent={hud.cyan} />
+          <StatCard icon={<FlagRoundedIcon />} label="Reports" value={stats.totalReports} accent={hud.amber} />
+          <StatCard icon={<WarningRoundedIcon />} label="Stale data" value={stats.staleStations} accent={hud.neon} />
         </Box>
       )}
 
@@ -155,8 +255,18 @@ function Overview() {
         }}
       >
         <Card sx={{ p: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Recent reports
+          <Typography
+            sx={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: hud.textHigh,
+            }}
+            gutterBottom
+          >
+            ▚ Community Queue &amp; Reports
           </Typography>
           <Divider sx={{ mb: 1 }} />
           {reports.length === 0 ? (
@@ -194,8 +304,18 @@ function Overview() {
         </Card>
 
         <Card sx={{ p: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Station moderation
+          <Typography
+            sx={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: hud.textHigh,
+            }}
+            gutterBottom
+          >
+            ▚ Stations &amp; Hubs — Moderation
           </Typography>
           <Divider sx={{ mb: 1 }} />
           <Stack divider={<Divider />} sx={{ maxHeight: 420, overflowY: "auto" }}>
@@ -265,8 +385,18 @@ function Overview() {
 
       {/* Station map — click any pin to edit that station's details. */}
       <Card sx={{ p: 2 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Station map
+        <Typography
+          sx={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: hud.textHigh,
+          }}
+          gutterBottom
+        >
+          ▚ Live Network Map
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Tap a station pin to edit its details.
@@ -332,7 +462,18 @@ function LikeTrendCard() {
   return (
     <Card sx={{ p: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-        <Typography variant="subtitle1">Station like trend</Typography>
+        <Typography
+          sx={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: hud.textHigh,
+          }}
+        >
+          ▚ Station Like Trend
+        </Typography>
         <Chip label={`${totalNet >= 0 ? "+" : ""}${totalNet} net`} size="small" color={totalNet >= 0 ? "success" : "default"} />
       </Stack>
       <Divider sx={{ mb: 1.5 }} />

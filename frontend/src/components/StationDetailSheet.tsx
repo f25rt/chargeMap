@@ -28,7 +28,7 @@ import PlaceRoundedIcon from "@mui/icons-material/PlaceRounded";
 import { api } from "../api/client";
 import type { ChargerStatus, StationDetail } from "../api/types";
 import StationReviews from "./StationReviews";
-import { statusDot, statusLabel } from "../theme";
+import { hud, statusDot, statusLabel } from "../theme";
 import { useAuth } from "../auth/AuthContext";
 
 interface Props {
@@ -58,20 +58,74 @@ function timeAgo(iso: string | null): string {
   return `${Math.round(h / 24)} d ago`;
 }
 
-/** Small overline label used above stat values. */
-function Overline({ children }: { children: React.ReactNode }) {
+/** A boxed HUD telemetry readout (label + big value + optional unit/sub). */
+function TelemetryStat({
+  label,
+  value,
+  unit,
+  sub,
+  accent = hud.textHigh,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  sub?: string;
+  accent?: string;
+}) {
   return (
-    <Typography
+    <Box
       sx={{
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: 0.4,
-        textTransform: "uppercase",
-        color: "text.secondary",
+        bgcolor: hud.surface2,
+        border: `1px solid ${hud.border}`,
+        borderRadius: 1,
+        p: 1.25,
       }}
     >
-      {children}
-    </Typography>
+      <Typography
+        sx={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: hud.textMuted,
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        sx={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontWeight: 700,
+          fontSize: 17,
+          lineHeight: 1.1,
+          color: accent,
+          mt: 0.4,
+        }}
+        noWrap
+      >
+        {value}
+        {unit && (
+          <Typography component="span" sx={{ fontSize: 10, color: hud.textMuted, ml: 0.4 }}>
+            {unit}
+          </Typography>
+        )}
+      </Typography>
+      {sub && (
+        <Typography
+          sx={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 9,
+            color: hud.textMuted,
+            textTransform: "uppercase",
+            mt: 0.25,
+          }}
+          noWrap
+        >
+          {sub}
+        </Typography>
+      )}
+    </Box>
   );
 }
 
@@ -248,7 +302,15 @@ export default function StationDetailSheet({
     }
   };
 
-  const dot = station ? statusDot(station.availabilitySummary) : "#9ca3af";
+  const dot = station ? statusDot(station.availabilitySummary) : hud.textMuted;
+
+  // Peak power across the station's chargers, and the type that delivers it.
+  const topCharger =
+    station && station.chargers.length > 0
+      ? station.chargers.reduce((a, b) => (b.powerKw > a.powerKw ? b : a))
+      : null;
+  const maxPowerKw = topCharger ? topCharger.powerKw : 0;
+  const maxChargerType = topCharger ? topCharger.chargerType : null;
 
   return (
     <Drawer
@@ -270,29 +332,30 @@ export default function StationDetailSheet({
               // Sit just above the nearby-charger sheet (its ~20% peek), almost touching.
               bottom: "calc(20% + 4px)",
               right: 12,
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              borderBottomLeftRadius: 16,
-              borderBottomRightRadius: 16,
-              border: "1px solid rgba(30,60,40,0.10)",
-              bgcolor: "#ffffff",
-              boxShadow: "0 12px 40px rgba(0,0,0,0.16)",
+              borderTopLeftRadius: 8,
+              borderTopRightRadius: 8,
+              borderBottomLeftRadius: 8,
+              borderBottomRightRadius: 8,
+              border: `1px solid ${hud.borderMint}`,
+              bgcolor: hud.surface1,
+              boxShadow: `0 0 32px rgba(0,255,157,0.10)`,
             }
           : {
               // Mobile: bottom sheet, full width (no clipping).
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
               maxHeight: "90%",
               width: "100%",
-              bgcolor: "#ffffff",
-              boxShadow: "0 -8px 32px rgba(0,0,0,0.12)",
+              bgcolor: hud.surface1,
+              borderTop: `1px solid ${hud.borderMint}`,
+              boxShadow: `0 0 32px rgba(0,255,157,0.12)`,
             },
       }}
     >
       {/* Grabber */}
       {!isDesktop && (
         <Box sx={{ display: "flex", justifyContent: "center", pt: 1.25, pb: 0.5 }}>
-          <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: "#e2e5e9" }} />
+          <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: hud.border }} />
         </Box>
       )}
 
@@ -310,146 +373,277 @@ export default function StationDetailSheet({
           }}
         >
           <Box sx={{ overflowY: "auto", px: 2.5, pt: 1 }}>
-            {/* Header: name + address left, actions right */}
-            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2 }} noWrap>
-                  {station.name}
-                </Typography>
-                {station.address && (
-                  <Stack direction="row" spacing={0.5} alignItems="center" mt={0.5}>
-                    <PlaceRoundedIcon sx={{ fontSize: 15, color: "text.secondary" }} />
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {station.address}
-                    </Typography>
-                  </Stack>
-                )}
-              </Box>
-              <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-                <Button
-                  size="small"
-                  onClick={toggleLike}
-                  disabled={likeBusy}
-                  startIcon={
-                    likedByMe ? (
-                      <ThumbUpRoundedIcon sx={{ fontSize: 16 }} />
-                    ) : (
-                      <ThumbUpOffAltRoundedIcon sx={{ fontSize: 16 }} />
-                    )
-                  }
-                  sx={{
-                    minWidth: 0,
-                    px: 1.25,
-                    height: 40,
-                    borderRadius: 999,
-                    bgcolor: likedByMe ? "rgba(31,157,87,.12)" : "#f3f4f6",
-                    color: likedByMe ? "primary.main" : "text.secondary",
-                  }}
-                >
-                  {likeCount}
-                </Button>
-                <IconButton
-                  size="small"
-                  onClick={() =>
-                    user ? onToggleFavorite(station.id, !isFavorite) : onRequireLogin()
-                  }
-                  sx={{ width: 40, height: 40, bgcolor: "#f3f4f6" }}
-                >
-                  {isFavorite ? (
-                    <FavoriteRoundedIcon sx={{ color: "#dc2626" }} fontSize="small" />
-                  ) : (
-                    <FavoriteBorderRoundedIcon fontSize="small" />
-                  )}
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={onClose}
-                  sx={{ width: 40, height: 40, bgcolor: "#f3f4f6" }}
-                >
-                  <CloseRoundedIcon fontSize="small" />
-                </IconButton>
-              </Stack>
-            </Stack>
-
-            {/* Status line: dot + text */}
-            <Stack direction="row" spacing={1} alignItems="center" mt={1.5}>
-              <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: dot }} />
-              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                {station.availableCount} of {station.totalChargers} available
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                · updated {timeAgo(station.availabilityUpdatedAt)}
-              </Typography>
-            </Stack>
-
-            {/* Stat strip: values split by hairline dividers, no boxes */}
+            {/* Hero header: operator/id/status meta chips */}
             <Stack
               direction="row"
-              divider={<Divider orientation="vertical" flexItem />}
-              spacing={0}
-              sx={{ mt: 2, mb: 2 }}
+              alignItems="center"
+              spacing={1}
+              flexWrap="wrap"
+              useFlexGap
+              sx={{ mb: 1 }}
             >
-              <Box sx={{ flex: 1, pr: 2 }}>
-                <Overline>Price</Overline>
-                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
-                  {station.currentPricing ? `₱${station.currentPricing.pricePerKwh}` : "—"}
-                  <Typography component="span" variant="caption" color="text.secondary">
-                    {" "}/kWh
-                  </Typography>
-                </Typography>
-              </Box>
-              <Box sx={{ flex: 1, px: 2 }}>
-                <Overline>Distance</Overline>
-                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>
-                  {station.distanceMeters != null
-                    ? `${(station.distanceMeters / 1000).toFixed(1)} km`
-                    : "—"}
-                </Typography>
-              </Box>
-              <Box sx={{ flex: 1, pl: 2 }}>
-                <Overline>Hours</Overline>
-                <Typography sx={{ fontSize: 15, fontWeight: 600 }} noWrap>
-                  {station.openingHours ?? "—"}
-                </Typography>
-              </Box>
-            </Stack>
-
-            <Divider />
-
-            {/* Chargers: divider-separated rows, no boxes */}
-            <Typography sx={{ fontSize: 13, fontWeight: 700, mt: 2, mb: 0.5 }}>
-              CHARGERS
-            </Typography>
-            <Stack divider={<Divider />}>
-              {station.chargers.map((c) => (
-                <Stack
-                  key={c.chargerId}
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ py: 1.5 }}
+              {station.operator && (
+                <Typography
+                  sx={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: hud.textMuted,
+                    bgcolor: hud.surface2,
+                    px: 0.75,
+                    py: 0.25,
+                    borderRadius: 0.5,
+                    border: `1px solid ${hud.border}`,
+                  }}
                 >
-                  <Box>
-                    <Typography sx={{ fontSize: 15, fontWeight: 600 }}>
-                      {c.connectorType}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {c.chargerType.replace("_", " ")} · {c.powerKw} kW
-                    </Typography>
-                  </Box>
-                  <Stack direction="row" spacing={0.75} alignItems="center">
-                    <Box
-                      sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: statusDot(c.status) }}
-                    />
-                    <Typography
-                      sx={{ fontSize: 13, fontWeight: 600, color: statusDot(c.status) }}
-                    >
-                      {statusLabel(c.status)}
-                    </Typography>
-                  </Stack>
-                </Stack>
-              ))}
+                  {station.operator}
+                </Typography>
+              )}
+              <Typography
+                sx={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  color: hud.textMuted,
+                }}
+              >
+                ID: {station.id.slice(-6).toUpperCase()}
+              </Typography>
+              <Box sx={{ flex: 1 }} />
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: dot }} />
+                <Typography
+                  sx={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: dot,
+                  }}
+                >
+                  {station.availableCount}/{station.totalChargers} FREE
+                </Typography>
+              </Stack>
+              <IconButton
+                size="small"
+                onClick={onClose}
+                sx={{ width: 30, height: 30, bgcolor: hud.surface2, ml: 0.5 }}
+              >
+                <CloseRoundedIcon sx={{ fontSize: 16 }} />
+              </IconButton>
             </Stack>
+
+            {/* Title */}
+            <Typography sx={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
+              {station.name}
+            </Typography>
+
+            {/* Distance / hours / updated meta line */}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              flexWrap="wrap"
+              useFlexGap
+              sx={{ mt: 0.75, color: hud.textMuted, fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              {station.distanceMeters != null && (
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <PlaceRoundedIcon sx={{ fontSize: 14, color: hud.mint }} />
+                  <Typography sx={{ fontSize: 12 }}>
+                    {(station.distanceMeters / 1000).toFixed(1)} km away
+                  </Typography>
+                </Stack>
+              )}
+              {station.openingHours && (
+                <Typography sx={{ fontSize: 12 }}>• {station.openingHours}</Typography>
+              )}
+              <Typography sx={{ fontSize: 12 }}>
+                • updated {timeAgo(station.availabilityUpdatedAt)}
+              </Typography>
+            </Stack>
+
+            {/* Telemetry stat strip: MAX OUTPUT / UNIT RATE / AVAILABILITY */}
+            <Box
+              sx={{
+                mt: 2,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 1,
+              }}
+            >
+              <TelemetryStat
+                label="Max Output"
+                value={String(maxPowerKw)}
+                unit="kW"
+                accent={hud.mint}
+                sub={maxChargerType ? maxChargerType.replace("_", " ") : undefined}
+              />
+              <TelemetryStat
+                label="Unit Rate"
+                value={station.currentPricing ? `₱${station.currentPricing.pricePerKwh}` : "—"}
+                unit={station.currentPricing ? "per kWh" : undefined}
+                accent={hud.textHigh}
+              />
+              <TelemetryStat
+                label="Availability"
+                value={statusLabel(station.availabilitySummary)}
+                accent={dot}
+              />
+            </Box>
+
+            {/* Connector stalls */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2.5 }}>
+              <Typography
+                sx={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  color: hud.textMuted,
+                }}
+              >
+                CONNECTOR STALLS ({station.chargers.length} BAYS)
+              </Typography>
+            </Stack>
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              {station.chargers.map((c, i) => {
+                const cDot = statusDot(c.status);
+                return (
+                  <Box
+                    key={c.chargerId}
+                    sx={{
+                      p: 1.25,
+                      borderRadius: 1,
+                      bgcolor: hud.surface2,
+                      border: `1px solid ${hud.border}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography sx={{ fontSize: 14, fontWeight: 700 }}>
+                          {c.connectorType}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: hud.void,
+                            bgcolor: hud.mint,
+                            px: 0.6,
+                            py: 0.1,
+                            borderRadius: 0.5,
+                          }}
+                        >
+                          {c.powerKw} kW
+                        </Typography>
+                      </Stack>
+                      <Typography
+                        sx={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 11,
+                          color: hud.textMuted,
+                          mt: 0.25,
+                        }}
+                      >
+                        {c.chargerType.replace("_", " ")} • Bay {String(i + 1).padStart(2, "0")}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={0.6} alignItems="center" sx={{ flexShrink: 0 }}>
+                      <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: cDot }} />
+                      <Typography
+                        sx={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: cDot,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {statusLabel(c.status)}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                );
+              })}
+            </Stack>
+
+            {/* Station amenities */}
+            {station.amenities.length > 0 && (
+              <>
+                <Typography
+                  sx={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    color: hud.textMuted,
+                    mt: 2.5,
+                    mb: 1,
+                  }}
+                >
+                  STATION AMENITIES
+                </Typography>
+                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                  {station.amenities.map((a) => (
+                    <Typography
+                      key={a}
+                      sx={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 11,
+                        color: hud.textHigh,
+                        bgcolor: hud.surface2,
+                        border: `1px solid ${hud.border}`,
+                        px: 1,
+                        py: 0.4,
+                        borderRadius: 0.5,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {a}
+                    </Typography>
+                  ))}
+                </Stack>
+              </>
+            )}
+
+            {/* Site visual verification (station photo) */}
+            {station.imageId && (
+              <>
+                <Typography
+                  sx={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    color: hud.textMuted,
+                    mt: 2.5,
+                    mb: 1,
+                  }}
+                >
+                  SITE VISUAL VERIFICATION
+                </Typography>
+                <Box
+                  component="img"
+                  src={api.imageUrl(station.imageId)}
+                  alt={station.name}
+                  sx={{
+                    width: "100%",
+                    borderRadius: 1,
+                    border: `1px solid ${hud.border}`,
+                    objectFit: "cover",
+                    maxHeight: 180,
+                  }}
+                />
+              </>
+            )}
+
+            <Divider sx={{ mt: 2 }} />
 
             {/* Report (collapsible, secondary) */}
             {message && <Alert severity="success" sx={{ my: 1.5 }}>{message}</Alert>}
@@ -556,7 +750,7 @@ export default function StationDetailSheet({
               pb: "calc(var(--safe-bottom) + 16px)",
               borderTop: "1px solid",
               borderColor: "divider",
-              bgcolor: "#fff",
+              bgcolor: hud.surface1,
             }}
           >
             {routeError && (
@@ -565,41 +759,77 @@ export default function StationDetailSheet({
               </Alert>
             )}
 
-            <Stack direction="row" spacing={1} alignItems="center">
+            {/* Secondary actions: report / edit (text), like count */}
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
               <Button
                 variant="text"
+                size="small"
                 onClick={() => {
                   if (!user) return onRequireLogin();
                   setReportOpen((o) => !o);
                   setEditOpen(false);
                 }}
                 startIcon={<FlagRoundedIcon />}
-                sx={{ flexShrink: 0, minWidth: 0, px: 1 }}
+                sx={{ flexShrink: 0, minWidth: 0, px: 1, color: hud.textMuted }}
               >
                 Report
               </Button>
               <Button
                 variant="text"
+                size="small"
                 onClick={() => {
                   if (!user) return onRequireLogin();
                   setEditOpen((o) => !o);
                   setReportOpen(false);
                 }}
                 startIcon={<EditRoundedIcon />}
-                sx={{ flexShrink: 0, minWidth: 0, px: 1 }}
+                sx={{ flexShrink: 0, minWidth: 0, px: 1, color: hud.textMuted }}
               >
                 Edit
               </Button>
+              <Box sx={{ flex: 1 }} />
               <Button
-                fullWidth
-                variant="contained"
-                size="large"
-                startIcon={<NavigationRoundedIcon />}
-                onClick={startNavigate}
-                disabled={!station.location || routing}
+                size="small"
+                onClick={toggleLike}
+                disabled={likeBusy}
+                startIcon={
+                  likedByMe ? (
+                    <ThumbUpRoundedIcon sx={{ fontSize: 15 }} />
+                  ) : (
+                    <ThumbUpOffAltRoundedIcon sx={{ fontSize: 15 }} />
+                  )
+                }
+                sx={{
+                  minWidth: 0,
+                  px: 1,
+                  color: likedByMe ? "primary.main" : hud.textMuted,
+                }}
               >
-                {routing ? "Routing…" : "Navigate"}
+                {likeCount}
               </Button>
+            </Stack>
+
+            {/* Primary action row: save / share + big START NAVIGATION */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <IconButton
+                onClick={() =>
+                  user ? onToggleFavorite(station.id, !isFavorite) : onRequireLogin()
+                }
+                sx={{
+                  flexShrink: 0,
+                  border: `1px solid ${hud.border}`,
+                  borderRadius: 1,
+                  width: 48,
+                  height: 48,
+                  bgcolor: hud.surface2,
+                }}
+              >
+                {isFavorite ? (
+                  <FavoriteRoundedIcon sx={{ color: hud.neon }} fontSize="small" />
+                ) : (
+                  <FavoriteBorderRoundedIcon fontSize="small" />
+                )}
+              </IconButton>
               <Tooltip title="Open in Google Maps">
                 <span>
                   <IconButton
@@ -607,17 +837,32 @@ export default function StationDetailSheet({
                     disabled={!station.location}
                     sx={{
                       flexShrink: 0,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                      width: 44,
-                      height: 44,
+                      border: `1px solid ${hud.border}`,
+                      borderRadius: 1,
+                      width: 48,
+                      height: 48,
+                      bgcolor: hud.surface2,
                     }}
                   >
-                    <MapRoundedIcon />
+                    <MapRoundedIcon fontSize="small" />
                   </IconButton>
                 </span>
               </Tooltip>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<NavigationRoundedIcon />}
+                onClick={startNavigate}
+                disabled={!station.location || routing}
+                sx={{ height: 48, boxShadow: "0 0 20px rgba(0,255,157,.35)" }}
+              >
+                {routing
+                  ? "Routing…"
+                  : station.distanceMeters != null
+                    ? `Start Navigation • ${(station.distanceMeters / 1000).toFixed(1)} km`
+                    : "Start Navigation"}
+              </Button>
             </Stack>
           </Box>
         </Box>

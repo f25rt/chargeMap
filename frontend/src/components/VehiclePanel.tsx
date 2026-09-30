@@ -34,11 +34,11 @@ const MANUFACTURERS: { value: VehicleManufacturer; label: string }[] = [
 ];
 
 const TIER_COLOR: Record<BatteryTier, string> = {
-  EXCELLENT: "#1f9d57",
-  GOOD: "#4caf50",
-  LOW: "#f59e0b",
-  CRITICAL: "#dc2626",
-  UNKNOWN: "#9ca3af",
+  EXCELLENT: "#00ff9d", // hyper-mint
+  GOOD: "#00b8ff", // cryo-cyan
+  LOW: "#ffb800", // amber ion
+  CRITICAL: "#ff3366", // warning neon
+  UNKNOWN: "#64748b", // muted telemetry
 };
 
 function timeAgo(iso: string | null): string {

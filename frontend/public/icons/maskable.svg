@@ -1,17 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ChargeMap">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1f9d57"/>
-      <stop offset="1" stop-color="#16773f"/>
-    </linearGradient>
-  </defs>
-  <!-- Full-bleed background so the maskable safe zone is always filled -->
-  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Full-bleed void background so the maskable safe zone is always filled -->
+  <rect width="512" height="512" fill="#040608"/>
   <!-- Pin + bolt scaled into the ~80% maskable safe zone (centered) -->
   <g transform="translate(256 256) scale(0.62) translate(-256 -256)">
-    <path fill="#ffffff" opacity="0.16"
+    <path fill="#00ff9d" opacity="0.16"
       d="M256 40c-97 0-176 79-176 176 0 120 158 250 168 258a13 13 0 0 0 16 0c10-8 168-138 168-258C432 119 353 40 256 40z"/>
-    <path fill="#ffffff"
+    <path fill="#00ff9d"
       d="M283 120 176 262h63l-24 116 121-152h-66z"/>
   </g>
 </svg>

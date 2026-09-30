@@ -118,8 +118,12 @@ export default function DashboardShell({
         <AppBar
           position="static"
           elevation={0}
-          color="primary"
-          sx={{ pt: "var(--safe-top)" }}
+          sx={{
+            pt: "var(--safe-top)",
+            bgcolor: "background.paper",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
         >
           <Toolbar sx={{ gap: 1 }}>
             {!isDesktop && (
@@ -127,16 +131,17 @@ export default function DashboardShell({
                 <MenuRoundedIcon />
               </IconButton>
             )}
-            <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" noWrap sx={{ flexGrow: 1, color: "text.primary" }}>
               {active?.label ?? title}
             </Typography>
             <Chip
               label={roleLabel}
               size="small"
-              sx={{ bgcolor: "rgba(255,255,255,.2)", color: "#fff", fontWeight: 700 }}
+              color="primary"
+              sx={{ fontWeight: 700 }}
             />
             <IconButton color="inherit" onClick={(e) => setMenuAnchor(e.currentTarget)}>
-              <Avatar sx={{ width: 30, height: 30, bgcolor: "rgba(255,255,255,.25)", fontSize: 14 }}>
+              <Avatar sx={{ width: 30, height: 30, bgcolor: "primary.main", color: "primary.contrastText", fontSize: 14 }}>
                 {user?.name.charAt(0).toUpperCase()}
               </Avatar>
             </IconButton>

@@ -55,6 +55,7 @@ export interface StationDetail extends StationSummary {
   currentPricing: Pricing | null;
   lastVerified: string | null;
   disabled: boolean;
+  imageId: string | null;
   likeCount: number;
 }
 

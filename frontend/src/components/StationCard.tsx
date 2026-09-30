@@ -28,7 +28,7 @@ export default function StationCard({
   return (
     <Card
       sx={{
-        boxShadow: selected ? "0 6px 20px rgba(31,157,87,.18)" : "0 2px 10px rgba(20,45,30,.05)",
+        boxShadow: selected ? "0 0 18px rgba(0,255,157,.22)" : "none",
         outline: selected ? "1.5px solid" : "none",
         outlineColor: "primary.main",
       }}

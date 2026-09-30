@@ -153,7 +153,7 @@ export default function BranchesPanel() {
                   <Avatar
                     variant="rounded"
                     src={b.profileImageId ? api.imageUrl(b.profileImageId) : undefined}
-                    sx={{ width: 48, height: 48, bgcolor: "rgba(31,157,87,.12)", color: "primary.main" }}
+                    sx={{ width: 48, height: 48, bgcolor: "rgba(0,255,157,.12)", color: "primary.main" }}
                   >
                     <ApartmentRoundedIcon />
                   </Avatar>

@@ -368,7 +368,7 @@ export default function RewardsPanel() {
                   <Avatar
                     variant="rounded"
                     src={p.imageId ? api.imageUrl(p.imageId) : undefined}
-                    sx={{ width: 40, height: 40, bgcolor: "rgba(31,157,87,.12)", color: "primary.main" }}
+                    sx={{ width: 40, height: 40, bgcolor: "rgba(0,255,157,.12)", color: "primary.main" }}
                   >
                     <EmojiEventsRoundedIcon fontSize="small" />
                   </Avatar>

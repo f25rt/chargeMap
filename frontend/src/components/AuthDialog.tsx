@@ -112,7 +112,7 @@ export default function AuthDialog({ open, onClose }: Props) {
                 height: 34,
                 borderRadius: "50%",
                 bgcolor: "primary.main",
-                color: "#fff",
+                color: "primary.contrastText",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -122,7 +122,7 @@ export default function AuthDialog({ open, onClose }: Props) {
             </Box>
             <Typography variant="h6">{vehicleStep ? "Connect your EV" : "Welcome"}</Typography>
           </Stack>
-          <IconButton onClick={close} size="small" sx={{ bgcolor: "#f3f4f6" }}>
+          <IconButton onClick={close} size="small" sx={{ bgcolor: "action.hover" }}>
             <CloseRoundedIcon fontSize="small" />
           </IconButton>
         </Stack>

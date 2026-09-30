@@ -46,6 +46,7 @@ import AuthDialog from "../components/AuthDialog";
 import BottomSheet from "../components/BottomSheet";
 import AddStationDialog from "../components/AddStationDialog";
 import ProfileSheet from "../components/ProfileSheet";
+import { hud } from "../theme";
 import { Fab } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 
@@ -491,7 +492,7 @@ export default function ConsumerApp() {
             direction="row"
             alignItems="center"
             spacing={1}
-            sx={{ px: 1.5, py: 1, bgcolor: "rgba(31,157,87,.10)" }}
+            sx={{ px: 1.5, py: 1, bgcolor: "rgba(0,255,157,.10)" }}
           >
             <NavigationRoundedIcon sx={{ fontSize: 18, color: "primary.main" }} />
             <Typography sx={{ fontSize: 13, fontWeight: 700, flex: 1 }} color="primary.dark">
@@ -500,7 +501,7 @@ export default function ConsumerApp() {
             <IconButton
               size="small"
               onClick={clearRoute}
-              sx={{ width: 26, height: 26, bgcolor: "rgba(255,255,255,.7)" }}
+              sx={{ width: 26, height: 26, bgcolor: "rgba(4,6,8,.4)", color: hud.textHigh }}
             >
               <ClearIcon sx={{ fontSize: 16 }} />
             </IconButton>
@@ -563,8 +564,8 @@ export default function ConsumerApp() {
                   mt: 1.25,
                   p: 1.25,
                   borderRadius: 2,
-                  bgcolor: "rgba(255,167,38,.12)",
-                  border: "1px solid rgba(255,167,38,.4)",
+                  bgcolor: "rgba(255,184,0,.12)",
+                  border: "1px solid rgba(255,184,0,.4)",
                 }}
               >
                 <Typography sx={{ fontSize: 11.5, fontWeight: 700 }} color="warning.dark">
@@ -719,11 +720,11 @@ export default function ConsumerApp() {
             sx={{
               mt: 1,
               p: 2.5,
-              borderRadius: 3,
-              bgcolor: "#fff",
+              borderRadius: 2,
+              bgcolor: hud.surface1,
               border: "1px solid",
-              borderColor: "divider",
-              boxShadow: "0 10px 30px rgba(20,45,30,.16)",
+              borderColor: hud.borderMint,
+              boxShadow: "0 0 24px rgba(0,255,157,.10)",
               maxWidth: 420,
             }}
           >

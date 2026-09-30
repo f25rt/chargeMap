@@ -839,7 +839,7 @@ export default function ConsumerApp() {
           Only shown to signed-in users. */}
       {user && (
         <Tooltip
-          title={pinMode ? "Tap the map to drop the station pin" : "Add a charging station"}
+          title={pinMode ? "Tap the map to drop the station pin" : "Add station"}
           placement="left"
         >
           <Fab

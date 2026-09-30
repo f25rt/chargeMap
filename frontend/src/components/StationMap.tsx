@@ -1,4 +1,12 @@
-import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Polyline,
+  Tooltip as LeafletTooltip,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 import type { StationSummary } from "../api/types";
@@ -190,7 +198,12 @@ export default function StationMap({
             icon={priceIcon(s, s.id === selectedId)}
             zIndexOffset={s.id === selectedId ? 1000 : 0}
             eventHandlers={{ click: () => onSelect(s.id) }}
-          />
+          >
+            {/* Hover label: shows the station name (desktop hover; tap on touch selects). */}
+            <LeafletTooltip direction="top" offset={[0, -14]} opacity={1} className="chargemap-tip">
+              {s.name}
+            </LeafletTooltip>
+          </Marker>
         ))}
     </MapContainer>
   );

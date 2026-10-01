@@ -55,6 +55,69 @@ body {
   filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.7);
 }
 
+/* "You are here" marker: a cyan dot with a soft expanding pulse ring. */
+.chargemap-mylocation-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #00b8ff;
+  border: 2px solid #040608;
+  box-shadow: 0 0 10px rgba(0, 184, 255, 0.8);
+}
+.chargemap-mylocation-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: rgba(0, 184, 255, 0.35);
+  animation: chargemap-locpulse 2s ease-out infinite;
+}
+@keyframes chargemap-locpulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Locate-me / calibration control: floating button, bottom-right above attribution. */
+.chargemap-locate-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 28px;
+  z-index: 1000;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #121824;
+  color: #00ff9d;
+  border: 1px solid #1e293b;
+  box-shadow: 0 0 16px rgba(0, 255, 157, 0.12);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.chargemap-locate-btn:hover {
+  border-color: #00ff9d;
+  background: #1a2130;
+  box-shadow: 0 0 18px rgba(0, 255, 157, 0.3);
+}
+.chargemap-locate-btn:active {
+  transform: scale(0.94);
+}
+
 /* Station hover tooltip: dark HUD surface with a thin mint border + mono label. */
 .leaflet-tooltip.chargemap-tip {
   background: #0b0e14;

@@ -98,8 +98,11 @@ export default function ConsumerApp() {
   } | null>(null);
   // Live ETA (seconds) that counts down and recomputes as the device moves.
   const [liveEtaSeconds, setLiveEtaSeconds] = useState<number | null>(null);
-  // User's current location, used to estimate drive time to nearby chargers.
+  // User's current location, used to estimate drive time to nearby chargers + show the
+  // "you are here" marker.
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
+  // Pan/zoom target for the locate-me control (new ref each press triggers a flyTo).
+  const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
   // Live height fraction of the nearby-charger bottom sheet (drives the FAB position).
   const [sheetFraction, setSheetFraction] = useState(0.2);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -214,6 +217,31 @@ export default function ConsumerApp() {
     setPinMode(false);
     setAddOpen(true);
   };
+
+  // Fetch the user's location once on mount so the "you are here" marker shows.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLoc([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
+
+  // Locate-me / calibration: get a fresh fix, update the marker, and recenter the map.
+  const handleLocate = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const here: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setUserLoc(here);
+        // New array reference each press so StationMap's FlyTo re-runs.
+        setFlyTo([here[0], here[1]]);
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
 
   // The station currently being routed to, and the geolocation watch handle.
   const destStationRef = useRef<StationSummary | null>(null);
@@ -468,6 +496,9 @@ export default function ConsumerApp() {
           onPickLocation={handlePickLocation}
           route={route}
           origin={origin}
+          userLocation={userLoc}
+          flyTo={flyTo}
+          onLocate={handleLocate}
         />
       </Box>
 

@@ -136,6 +136,15 @@ interface Props {
   route?: [number, number][] | null;
   /** The user's current location, shown as the route origin. */
   origin?: [number, number] | null;
+  /** The user's current location, shown as a "you are here" marker. */
+  userLocation?: [number, number] | null;
+  /**
+   * Target to pan/zoom to when it changes (used by the locate-me control). Pass a new
+   * array reference to trigger a flyTo; null does nothing.
+   */
+  flyTo?: [number, number] | null;
+  /** Called when the locate-me control is pressed. */
+  onLocate?: () => void;
 }
 
 /** A car marker for the user's current location (route origin). */
@@ -154,6 +163,52 @@ function originIcon(): L.DivIcon {
   });
 }
 
+/** A pulsing "you are here" dot for the user's current location. */
+function myLocationIcon(): L.DivIcon {
+  return L.divIcon({
+    className: "chargemap-mylocation",
+    html: `<div class="chargemap-mylocation-pulse"></div><div class="chargemap-mylocation-dot"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+}
+
+/** Pans/zooms the map to `target` whenever its reference changes. */
+function FlyTo({ target }: { target: [number, number] | null | undefined }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) {
+      map.flyTo(target, Math.max(map.getZoom(), 15), { duration: 0.8 });
+    }
+  }, [target, map]);
+  return null;
+}
+
+/** Floating "locate me" / calibration control, bottom-right above the attribution. */
+function LocateControl({ onLocate }: { onLocate?: () => void }) {
+  if (!onLocate) return null;
+  return (
+    <button
+      type="button"
+      aria-label="Center map on my location"
+      title="My location"
+      onClick={(e) => {
+        e.stopPropagation();
+        onLocate();
+      }}
+      className="chargemap-locate-btn"
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4" />
+        <line x1="12" y1="2" x2="12" y2="5" />
+        <line x1="12" y1="19" x2="12" y2="22" />
+        <line x1="2" y1="12" x2="5" y2="12" />
+        <line x1="19" y1="12" x2="22" y2="12" />
+      </svg>
+    </button>
+  );
+}
+
 export default function StationMap({
   center,
   stations,
@@ -164,8 +219,12 @@ export default function StationMap({
   onPickLocation,
   route = null,
   origin = null,
+  userLocation = null,
+  flyTo = null,
+  onLocate,
 }: Props) {
   return (
+    <div style={{ position: "relative", height: "100%", width: "100%" }}>
     <MapContainer
       center={center}
       zoom={13}
@@ -181,8 +240,13 @@ export default function StationMap({
       <Recenter center={center} />
       <PanToSelected stations={stations} selectedId={selectedId} />
       <FitRoute route={route} />
+      <FlyTo target={flyTo} />
       {pinMode && onPickLocation && <PinPicker onPick={onPickLocation} />}
       {pinnedPoint && <Marker position={pinnedPoint} icon={pinIcon()} />}
+      {/* "You are here" marker — only when not actively routing (origin shows the car). */}
+      {userLocation && !origin && (
+        <Marker position={userLocation} icon={myLocationIcon()} zIndexOffset={500} />
+      )}
       {route && route.length > 1 && (
         <>
           <Polyline positions={route} pathOptions={{ color: "#00ff9d", weight: 5, opacity: 0.9 }} />
@@ -206,5 +270,7 @@ export default function StationMap({
           </Marker>
         ))}
     </MapContainer>
+      {!pinMode && <LocateControl onLocate={onLocate} />}
+    </div>
   );
 }
